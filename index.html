@@ -1,0 +1,2205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Salvatore Scala</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#000;              /* the writing, and only the writing */
+    --chrome:#475569;        /* everything at the foot of the page */
+    --paper:#fff;
+    --pale:#cbd5e1;          /* where a character waits before it is read */
+    --pad:1rem;
+  }
+  @media (min-width:48rem){ :root{ --pad:2rem } }
+  @media (min-width:80rem){ :root{ --pad:4rem } }
+
+  *{box-sizing:border-box}
+  /* Only the 400 cut is loaded; this makes sure the browser never fakes a
+     heavier one anywhere on the page. */
+  html{font-synthesis:none;-webkit-font-synthesis:none}
+  /* Nothing on this site scrolls. Every view is built to sit on one screen. */
+  html,body{height:100%;overflow:hidden}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    -webkit-tap-highlight-color:transparent;
+    display:flex;
+    flex-direction:column;
+  }
+
+  /* The writing sits in the middle of the page and starts at the left margin.
+     The page itself scrolls — nothing is trapped in an inner box with a
+     scrollbar nobody can see. margin:auto rather than align-items:center, so
+     that content taller than the screen grows downward instead of being
+     clipped off the top. Room is left at the foot for the fixed bar. */
+  main{
+    flex:1;
+    min-height:0;                       /* so the writing can never push the footer off */
+    display:flex;
+    padding:6vh var(--pad) 2rem;
+    position:relative;                  /* the zine lies over whatever is here */
+  }
+  /* A page of the zine, laid over the page you were on. Nothing underneath is
+     taken down or moved — the writing, the pieces, the bio are all still
+     there, and the moment you press anything else the sheet is lifted off
+     them again. The pages are stacked in the same place so one can be pulled
+     up over the last without either of them moving. */
+  .zine{
+    position:absolute;
+    inset:0;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    pointer-events:none;
+    z-index:30;
+  }
+  .zine.on{display:flex}
+  /* One or the other. The square is not a sheet laid over the writing, it is
+     the other thing this page can be — so the writing goes, rather than
+     standing back behind it. The circle brings it back. */
+  #stage{transition:opacity .22s ease-out}
+  main.leafing #stage{opacity:0;pointer-events:none}
+  .zine img{
+    position:absolute;
+    display:block;
+    width:auto;height:auto;
+    max-width:min(100%,26rem);
+    max-height:100%;
+    /* A page comes up out of the paper on opacity alone. Never two at once:
+       the three sheets are not cut to the same outline, so one lying behind
+       another shows past its edges — and taking it away afterwards is a
+       change happening after the picture has already landed. Whatever is
+       there goes back to white first, and the next one comes up out of that. */
+    opacity:0;
+    transition:opacity .42s ease-out;
+    /* The scan keeps the paper's own grain and the light it was shot in, so
+       it is left alone here — no filter, no flattening. The one thing added
+       is the lift off the page, which is what a sheet on a sheet does. */
+    filter:drop-shadow(0 2px 10px rgba(0,0,0,.13));
+  }
+  .zine img.up{opacity:1}
+  .zine img.down{opacity:0;transition:opacity .22s ease-in}
+  /* What the square hands you now is a photograph and the line that was
+     written off it. The two travel as one block — the picture centred, the
+     writing hanging off its foot — so the line is never floating somewhere
+     on the page on its own. The block fades as a whole, the way a sheet did. */
+  /* Static, not absolute: the layer already centres its one child, and taking
+     the block out of flow left it hanging off the right edge.
+     Both halves are given their height up front rather than being allowed to
+     find it. The line is written a character at a time, so a block sized to
+     its contents would grow under the picture and lift it a few pixels with
+     every word — the picture has landed, and nothing that happens afterwards
+     is allowed to move it. */
+  /* Every photograph lands on exactly the same two lines, whatever is written
+     under it: the writing below is given the height of the longest of the
+     twelve, measured once, so a short line reserves the same room as a long
+     one and the block is the same size every time. Centred whole rather than
+     on the picture alone — with the longest line running to thirteen of them,
+     a picture pinned to the middle of the page would push its own caption off
+     the foot of it. */
+  /* One sheet: the photograph and the note under it come as a single scan, so
+     there is nothing here to lay out against anything else. It hangs on the
+     middle of the page and takes the height it is given. */
+  /* The sheet fills the layer and centres what it holds, rather than shrinking
+     to fit it: a box with no height of its own gives the sheet's own max-height
+     nothing to be a share of, and the scan collapses to nothing. */
+  .zine .leaf{
+    position:absolute;inset:0;
+    display:flex;align-items:center;justify-content:center;
+    opacity:0;transition:opacity .42s ease-out;
+  }
+  .zine .leaf.up{opacity:1}
+  .zine .leaf.down{opacity:0;transition:opacity .22s ease-in}
+  /* A fixed box the picture is fitted inside, so pictures of different shapes
+     all land on the same two lines and none of them resizes the block. */
+  /* The picture keeps its own shape and sits on the middle of the block; the
+     writing under it is free to run wider than the photograph does. */
+  .zine .leaf img{
+    display:block;
+    width:auto;max-width:min(92vw,42rem);height:auto;max-height:94%;
+    object-fit:contain;
+    opacity:1;transition:none;
+  }
+  /* The caption is written, not printed: it arrives a character at a time
+     under the picture, at the pace the rest of the site writes at. Its height
+     is the space left over, taken whether or not there are words in it yet,
+     and a long one scrolls inside that rather than pushing the picture. */
+  /* Nothing here scrolls, in either direction: the sheet is handed to you
+     whole, at whatever size the page can carry it. */
+  @media (max-width:48rem){
+    .zine .leaf img{max-width:88vw;max-height:88%}
+  }
+  /* Work gets the page nearly edge to edge. The writing keeps the wide margin
+     it needs to be readable; pictures do not, and giving it back to them is
+     the only way to make them bigger while the grid stays two across. */
+  /* Every view keeps the side margin the rule sets at the foot, so nothing on
+     the page ever reaches past either end of that line. Only the vertical
+     breathing room changes. */
+  main.wide{padding:2vh var(--pad) 1rem}
+  #stage{width:100%;margin:auto;max-height:100%}
+
+  .prose{
+    font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+    font-weight:400;
+    font-size:1.125rem;
+    line-height:1.625;
+    text-align:left;
+    white-space:pre-wrap;
+    /* No measure of its own — the writing runs the width of the column, the
+       way the reference does. */
+  }
+  @media (min-width:48rem){ .prose{font-size:1.25rem} }
+  @media (min-width:64rem){ .prose{font-size:1.875rem} }
+  /* The bio is not an aphorism. Those are a line or two and want all the room
+     the page has; this is six of them, and set at that size it runs off the
+     bottom and straight through the circle, the square and the mark on any
+     laptop screen. So it keeps the face and the leading and gives up the
+     size — which is what a bio is anyway: reading matter, not a headline. */
+  /* The bio is nineteen lines of verse that have to sit on one screen with no
+     scroll, so every pixel of height spent is a pixel of size given up. Two
+     places to get them back, and both of them suit verse anyway:
+     — the leading comes in from 1.625 to 1.4. Verse is set close; the line
+       breaks are already doing the work the leading does in prose.
+     — the break between blocks comes down from a whole blank line to three
+       quarters of one. Five blank lines were a fifth of the height.
+     What that buys is size, and size is what fills the width. */
+  .prose.bio{
+    font-size:1.875rem;                 /* what the home page is set in */
+    line-height:1.4;
+  }
+  /* Set in the bio's own type, a size down, and it keeps the left margin the
+     verse above it starts on. */
+  .cv-link{
+    display:inline-block;margin-top:1.6em;
+    font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+    font-size:.9em;letter-spacing:.04em;
+    color:inherit;text-decoration:none;
+    border-bottom:1px solid currentColor;padding-bottom:2px;
+    opacity:0;transition:opacity .5s ease-out;
+  }
+  .cv-link.on{opacity:.75}
+  .cv-link:hover{opacity:1}
+  .prose.bio p{margin:0 0 .75em}
+  .prose.bio p:last-child{margin-bottom:0}
+  /* And the reading view opens higher up the page than the writing does, for
+     the same reason. */
+  main.reading{padding-top:2rem}
+  /* No step up at the wide breakpoint the way the writing has one. Set as
+     verse the bio is twenty-one lines rather than eleven, and the extra size
+     buys nothing a bio wants — it only pushes the last line off the screen. */
+  /* And where even that is too much — a phone, where the same words break into
+     three times the lines — the rest is scrolled to rather than being allowed
+     to run out through the foot of the page.
+     The scroll has to sit here and not on the writing itself: a percentage
+     max-height resolves against the containing block's height, #stage's height
+     is auto, and a percentage against auto is simply dropped. #stage is the
+     one in the chain whose cap does resolve — main's height is settled by the
+     flex column — so #stage is where the room runs out and where the scrolling
+     belongs. No bar: the site does not show one anywhere. */
+  main.reading #stage{overflow-y:auto;scrollbar-width:none}
+  main.reading #stage::-webkit-scrollbar{display:none}
+
+  /* A character does not exist until it is written. It arrives pale and goes
+     to ink over .15s, so at any moment only the last five or six are still
+     grey — a short wake at the writing edge, and nothing at all ahead of it.
+     The spans hold their place while hidden, so the line never reflows as it
+     fills. `forwards` and not `both`: with `both` every character would take
+     the opening frame at once and the whole sentence would sit there in grey,
+     which gives the line away before it is read. */
+  .ch{position:relative;visibility:hidden;color:var(--pale)}
+  /* How long one character takes to go from pale to ink. Set against the step
+     between characters rather than fixed, because the two together are what
+     the writing looks like: at the home page's 60ms step a 150ms ink leaves
+     two and a half characters pale at once — a short, sharp edge. Left at 150
+     while the step is shortened, that edge stretches to eleven characters and
+     the writing stops being a hand and becomes a grey smear. Tied to the step,
+     the edge is the same two and a half characters at any speed. */
+  .on .ch{animation:ink var(--ink,150ms) linear forwards}
+  @keyframes ink{
+    from{visibility:visible;color:var(--pale)}
+    to  {visibility:visible;color:var(--ink)}
+  }
+  /* The campaign's line is drawn to the scroll rather than played to a clock,
+     so its characters are switched on one at a time from script instead of by
+     an animation. Same three states the writing has everywhere else: ink for
+     what has been written, pale for the last couple still landing, and the
+     block sitting on the one at the edge. */
+  .camp-head .ch.shown{visibility:visible;color:var(--ink)}
+  .camp-head .ch.edge{color:var(--pale)}
+  .camp-head .ch.tip::after{
+    content:"";
+    position:absolute;
+    left:0;
+    top:.12em;
+    width:1ch;
+    height:.92em;
+    background:var(--pale);
+    opacity:.72;
+  }
+
+  /* The block that marks where the words are entering. It fills the cell of
+     the character arriving right now — one column wide, since the face is
+     monospaced — holds for that character's slot and then gets out of the way,
+     leaving the pale letter to darken behind it. It inherits the letter's own
+     delay, so it advances in lockstep and can never drift. */
+  .on .ch::after{
+    content:"";
+    position:absolute;
+    left:0;
+    top:.12em;
+    width:1ch;
+    height:.92em;
+    background:var(--pale);
+    opacity:0;
+    animation:caret var(--per,60ms) linear forwards;
+    animation-delay:inherit;
+  }
+  @keyframes caret{0%,96%{opacity:1} 97%,100%{opacity:0}}
+
+
+  /* The circle. Filled at rest, hollow under the cursor. Press for another. */
+  .ring-button{
+    -webkit-appearance:none;appearance:none;
+    background:none;border:0;padding:0;margin:0;
+    display:flex;align-items:center;justify-content:center;
+    height:2rem;font-size:1.5rem;line-height:1;color:var(--chrome);cursor:pointer;
+  }
+  @media (min-width:64rem){ .ring-button{font-size:1.875rem} }
+  .ring{
+    display:inline-block;
+    width:.875em;height:.875em;
+    border-radius:50%;
+    background:currentColor;
+    border:2px solid transparent;
+    transition:background-color .2s,border-color .2s,transform .2s;
+  }
+  /* Hollow while a line is being written, filled once it has landed. */
+  .ring.hollow,
+  .ring-button:hover .ring,
+  .ring-button:focus-visible .ring{background:transparent;border-color:currentColor}
+  .ring-button:active .ring{transform:scale(.88)}
+  .ring-button:focus-visible{outline:none}
+  /* The two marks sit side by side under the writing. The square is the same
+     mark as the circle — same size, same colour, same hollowing on hover —
+     with the corners left on. It hands you a page of the zine. */
+  .marks{display:flex;align-items:center;gap:.75rem}
+  .ring.box{border-radius:0}
+
+  /* You arrive at a blank page with a sentence being written on it. Only once
+     that has landed does the rest of the furniture turn up — the prompt, the
+     circle and the two words together, on one half second. */
+  footer{
+    padding:0 var(--pad) 1.5rem;
+    width:100%;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .5s linear;
+  }
+  footer.shown{opacity:1;pointer-events:auto}
+
+  /* Sits directly over the circle. It is not written like the rest — it just
+     arrives, once the line above has finished and the page has been still for
+     a second. Its height is held so the circle never jumps. */
+  /* The foot of the page is a different voice from the writing: the sans, a
+     step smaller, a touch of tracking, and slate rather than black. */
+  .prompt{
+    transition:opacity .4s linear;
+    font-family:inherit;
+    font-size:.875rem;
+    font-weight:400;
+    line-height:1.43;
+    letter-spacing:.02em;
+    color:var(--chrome);
+    min-height:1.43em;
+    margin:0 0 .6rem;
+  }
+  @media (min-width:64rem){ .prompt{font-size:1rem} }
+  .prompt.gone{opacity:0}
+
+  /* The rule sits under the circle, not over it, and its span is the measure
+     for the whole page — nothing on any view reaches past either end of it. */
+  .rule{border-top:2px solid var(--chrome);width:100%;margin:.9rem 0 .5rem}
+
+  /* Kept quiet, the way the reference keeps its own: small, plain weight,
+     a little tracking, and no rule under them. */
+  /* The mark on the left, the two words on the right, both under the rule. */
+  .bar{display:flex;align-items:center;justify-content:space-between}
+  /* The mark is the way home, from any view — so it is a real button, stripped
+     back to exactly what the div looked like and given the same quiet hover
+     the two words on the right have. */
+  .sig{
+    -webkit-appearance:none;appearance:none;background:none;border:0;padding:0;
+    font-family:inherit;font-weight:inherit;line-height:inherit;
+    font-size:1.5rem;color:var(--chrome);letter-spacing:.01em;
+    cursor:pointer;transition:opacity .2s;
+  }
+  @media (min-width:64rem){ .sig{font-size:1.875rem} }
+  .sig:hover{opacity:.5}
+  .sig:focus-visible{outline:none;text-decoration:underline;text-underline-offset:.24em}
+
+  .nav{display:flex;gap:1rem;justify-content:flex-end}
+  .nav button{
+    -webkit-appearance:none;appearance:none;background:none;border:0;padding:0;
+    font-family:inherit;font-size:.875rem;font-weight:400;color:var(--chrome);
+    letter-spacing:.02em;text-transform:uppercase;cursor:pointer;
+    text-decoration:none;text-underline-offset:.24em;
+    transition:opacity .2s;
+  }
+  @media (min-width:64rem){ .nav button{font-size:1rem} }
+  .nav button:hover{opacity:.5}
+  .nav button[aria-pressed="true"]{text-decoration:underline}
+
+  /* Work: six pieces, two across and three down, in the outer two thirds. The
+     line about whichever one is pointed at has the third that is left. They are
+     long because the height is only ever what six rows can have without the
+     page scrolling — the width is not negotiable. */
+  /* The pictures are the outer two thirds and nothing else is: the third they
+     leave is where the line turns up. It is never empty — with nothing pointed
+     at, it says the one thing all six have in common. */
+  .work{position:relative;width:100%}
+  /* The two axes are set apart, not together. Measured the same they do not
+     read the same: the bands between the rows run the full width of the block
+     and the channel between the columns only its height, so at equal thickness
+     the wider band carries more white and sits heavier. The row gap is pulled
+     in by 2px to answer for it. These are the two numbers to turn if the
+     correction is wanted the other way round. */
+  .grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    column-gap:12px;
+    row-gap:10px;
+    padding:0;margin:0 0 0 auto;width:66.6667%;
+  }
+  .tile{margin:0}
+  /* The pieces are not written on, they are simply brought up — all six at
+     once, on the same half second the prompt over the circle uses. */
+  /* `up`, not `on` — `.on` is the writing trigger, and sharing the name meant
+     the grid switched the letters on before typeInto could control them. */
+  /* Eased rather than linear, so it reads as something coming up rather than
+     a switch being thrown — but brisk, since it is the answer to a click. */
+  .tile{opacity:0;transition:opacity .6s ease-out}
+  .grid.up .tile{opacity:1}
+  /* Corners softened to about the radius of the circle at the foot. The row
+     spans the stage and the picture fills its column, so its right edge lands
+     exactly on the end of the rule below. */
+  .tile .shot{
+    border-radius:10px;
+    overflow:hidden;
+    background:#f1f1f1;
+    transition:transform .2s cubic-bezier(.34,1.56,.64,1),filter .2s ease-out;
+  }
+  /* Height is handed down from script, in pixels: six rows have to divide the
+     screen exactly, and no ratio can know how much screen there is. */
+  .tile img{display:block;width:100%;height:var(--shot-h,120px);object-fit:cover}
+
+  /* Point at one and the other pictures go back 30%; the one under the cursor
+     comes forward. The pop is entirely in the easing — it overshoots 1.02 and
+     settles back, which is what makes it read as a knock rather than a zoom. */
+  /* The exemption has to out-weigh the rule it is exempting from: written as
+     `.tile:hover .shot` it carries one selector less than the line above and
+     loses, which darkens the very piece being pointed at. */
+  .grid:hover .tile .shot{filter:brightness(.7)}
+  .grid:hover .tile:hover .shot{filter:none;transform:scale(1.02)}
+
+  /* One line at a time, and it belongs to whichever piece is under the cursor.
+     It sits where the writing sits on the home page — the left of the stage,
+     halfway down — so pointing at a piece answers in the same place the site
+     speaks from everywhere else.
+
+     It is set exactly as the writing on the home page is — same face, same
+     sizes at the same widths, same leading, and starting at the left margin.
+     It wraps rather than shrinks: the size is the home page's and is not
+     negotiable, so in half the screen the longer lines take two rows. */
+  .work .hover-line{
+    position:absolute;
+    left:0;
+    top:50%;
+    transform:translateY(-50%);
+    width:33.3333%;
+    /* Room between the writing and the pictures. At 1.5rem the longest line
+       came within a few pixels of the first thumbnail and read as touching. */
+    padding-right:4rem;
+    margin:0;
+    font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+    font-size:1.125rem;
+    line-height:1.625;
+    text-align:left;
+    pointer-events:none;
+  }
+  @media (min-width:48rem){ .work .hover-line{font-size:1.25rem} }
+  @media (min-width:64rem){ .work .hover-line{font-size:1.875rem} }
+  /* The writing is animated on an inner block, so the outer one keeps the
+     half-height offset that centres it and the two never fight. A line never
+     swaps under you: the one leaving drops out first, the one arriving comes
+     up into its place. `pre-line` is what lets a line be written as two
+     sentences, one under the other. */
+  /* Its own class, not `span`: the writing puts one span round every character
+     inside this one, and a bare `span` here reaches those too — they each take
+     the block display meant for their parent and the line comes out stacked one
+     letter per row. */
+  .work .hover-line .ink{
+    display:block;
+    white-space:pre-line;
+    opacity:0;
+    transform:translateY(6px);
+    transition:opacity .14s ease-out,transform .14s ease-out;
+  }
+  .work .hover-line.lit .ink{opacity:1;transform:none}
+
+  /* Its room is held from the start, empty or not. Letting it take up height
+     only once it is written shunts the whole grid upward mid-animation. */
+  /* Inside a campaign: the name written large, and nothing else until it has
+     landed. Then the rest is brought up together on the same half second the
+     page uses everywhere. */
+  main.full #stage{height:100%;margin:0}
+  .camp{display:flex;flex-direction:column;height:100%;gap:3.5rem}
+  .camp h1{
+    font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+    font-weight:400;
+    /* The same face at the same weight as everything else. Only bigger —
+       no tightening, no heavier cut. */
+    /* The same size as the writing on the opening screen — no bigger. */
+    font-size:1.125rem;
+    line-height:1.625;
+    margin:0;
+    white-space:nowrap;
+  }
+  @media (min-width:48rem){ .camp h1{font-size:1.25rem} }
+  @media (min-width:64rem){ .camp h1{font-size:1.875rem} }
+
+  /* ── A campaign read in two columns ────────────────────────────────────────
+     The name and one line hold still on the left; the executions go down the
+     right. Scrolling the right column swaps the line: the old one is taken
+     back letter by letter, then the new one is written in its place. */
+  /* Label and piece live in the same row, so they line up with each other by
+     construction instead of by arithmetic. The rows scroll; the one in view is
+     at full strength and the next shows faintly beneath it. */
+  /* The campaign is two columns that do different things. The left one does not
+     move at all: the name sits there for as long as you are in the campaign.
+     Only the line under it changes, and it changes to name whatever piece is
+     beside it. The right one is the only thing that scrolls. */
+  .camp.split{
+    display:grid;
+    grid-template-columns:minmax(12rem,38%) 1fr;
+    gap:3rem;
+    align-items:center;
+    height:100%;
+  }
+  /* Only the name counts towards the column's height, and the line hangs below
+     it out of the flow. Left in the flow, a two-line note makes the block
+     taller, the column re-centres, and the name — the one thing that is meant
+     to be nailed down — shifts every time the scroll moves on. */
+  .camp-head{position:relative;display:block}
+  .camp-head h1{margin:0}
+  /* The name is fixed; this is the part that answers to the scroll. It is
+     never swapped under you — the line leaving drops out first and the one
+     arriving comes up into its place, the same way Work answers a hover. */
+  .camp-head .camp-line{
+    position:absolute;
+    top:calc(100% + .9rem);
+    left:0;
+    right:0;
+    display:flex;
+    flex-direction:column;
+    gap:.9rem;
+    opacity:0;
+    transform:translateY(6px);
+    transition:opacity .14s ease-out,transform .14s ease-out;
+  }
+  .camp-head.lit .camp-line{opacity:1;transform:none}
+  .camp-head .note:empty{display:none}
+  /* The campaign is not written on arrival — it comes up whole, on opacity,
+     with the name and its text already in place beside each other. */
+  .camp-scroll{
+    opacity:0;
+    /* The same 600ms the picture takes to fly in and the idea takes to be
+       written, so all three finish together. Left longer, the writing happened
+       behind a half-transparent page while the picture — laid over everything
+       at full strength — had already arrived. */
+    transition:opacity .6s ease-out;
+    height:100%;
+    overflow-y:auto;
+    /* `proximity`, not `mandatory`. Mandatory refuses to hold any position
+       between two rows — asked for seven points across one gap it accepted
+       only the two ends — and the line under the name is drawn from exactly
+       that in-between position. With nowhere to be but at a row, there was
+       nothing to draw and the words could only ever change all at once.
+       Proximity still gathers you onto a piece when you come to rest. */
+    scroll-snap-type:y proximity;
+    scrollbar-width:none;
+  }
+  .camp-scroll.lit{opacity:1}
+  .camp-scroll::-webkit-scrollbar{display:none}
+  /* Height and the padding above and below are set in script, in pixels: a
+     percentage height would resolve against a content box that the padding
+     itself changes, and the two would chase each other. */
+  /* A row is now only the piece — its name moved out to the fixed column. */
+  .step{
+    display:flex;
+    align-items:center;
+    scroll-snap-align:center;
+    opacity:.2;
+    transition:opacity .5s linear;
+  }
+  .step.now{opacity:1}
+  .camp-head .note{
+    font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+    font-size:.875rem;
+    line-height:1.6;
+    margin:0;
+  }
+  .step-media{display:flex;align-items:center;justify-content:flex-start;max-height:100%}
+  /* Every piece runs the full width of its column, which ends where the rule at
+     the foot ends. One measure for the whole campaign — the opening thumbnail,
+     the films and the stills all land on the same two edges. */
+  .step-media img,
+  .step-media video{
+    display:block;
+    width:100%;height:auto;
+    max-width:100%;
+    max-height:100%;
+    background:transparent;
+  }
+  /* The stand-in for real fullscreen, for a browser that will not give it up.
+     Fixed to the viewport rather than to the column, over everything, black
+     behind it so the film is the only thing in the room. `inset` and the
+     explicit maxima are needed because the rules above are more specific than
+     any of this would be on its own. */
+  .step-media video.blown{
+    position:fixed;
+    inset:0;
+    z-index:200;
+    width:100vw;
+    height:100vh;
+    max-width:none;
+    max-height:none;
+    background:#000;
+    object-fit:contain;
+  }
+  body.blown-out{overflow:hidden}
+  /* Three pieces sharing one frame. It runs the full width of the cell so no
+     single sticker is left at a third of 74%; the frame is proportioned so the
+     row still lands at the same height as the 16:9 ones. */
+  .step-media img.strip{max-width:100%}
+  /* An upright piece cannot run the full width the way the flat ones do — this
+     one is 300x534, and taken to the width of the column it would stand 1362
+     tall, or lose four fifths of itself to a crop. So its frame takes the full
+     width instead, landing on the same two edges as everything else, and the
+     film is centred in it — on the same middle as the thumbnail above. */
+  .step-media.center{justify-content:center;width:100%}
+  .step-media img.upright{width:auto;max-width:100%}
+  /* The one picture that is a door. Sized to what a phone camera can still
+     read off a screen, and it keeps the pointer that says so. */
+  .step-media .media-link{display:block;line-height:0;max-width:100%}
+  .step-media .media-link img{display:block;width:min(52%,320px);height:auto}
+  /* A row that is a way out rather than a thing to look at: the whole piece is
+     the line you press. It keeps the column's measure and none of its depth. */
+  .media-text-link{
+    font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+    font-size:.875rem;line-height:1.6;
+    color:inherit;text-decoration:none;
+    border-bottom:1px solid currentColor;padding-bottom:2px;
+  }
+  .media-text-link:hover{opacity:.55}
+  /* Four tracks, a line each. The only row on the site whose piece is a sound
+     and not a picture, so it is given the least furniture that still lets you
+     press play: the cover the album shipped with, the number the comment left,
+     and the browser's own transport. */
+  /* Four tracks, one under the other, filling the same column a picture gets
+     so the row carries the same weight as the ones around it. The cover is
+     kept square — it is the keypad, and the keypad is square. */
+  /* Two handsets and the code they were scanned from, on one line. The phones
+     take the height of the row and the code sits between them at a size a
+     camera can still read. */
+  .step-media.phones-cell{width:100%}
+  /* All three sit inside the column's own measure — nothing here is reached by
+     scrolling sideways. The handsets take the row's height and give up width
+     before the code does, so the code stays big enough to be read. */
+  .phones{
+    width:100%;display:flex;align-items:center;justify-content:center;
+    gap:clamp(10px,2.4vw,40px);overflow:hidden;
+  }
+  /* Equal shares of whatever the code leaves, and each handset fitted inside
+     its share — so both are always on the page and neither is reached by
+     scrolling sideways. */
+  .phones .phone{
+    flex:1 1 0;min-width:0;width:auto;
+    height:100%;max-height:100%;max-width:100%;
+    object-fit:contain;
+  }
+  .qr-link{flex:0 0 auto;display:block;line-height:0}
+  .qr-link img{display:block;width:clamp(110px,15vw,240px);height:auto}
+  .qr-link:hover{opacity:.7}
+
+  /* The block runs the full measure of the column, the same two edges every
+     picture lands on, and the four tracks divide its height between them. */
+  .step-media.beats-cell{width:100%}
+  .beats{width:100%;display:flex;flex-direction:column;gap:clamp(10px,1.4vw,20px)}
+  /* Each track sits on the same dark card the record's own player used, so the
+     four of them read as a tracklist rather than as four loose covers. */
+  .beat{
+    display:flex;align-items:center;gap:clamp(12px,1.8vw,24px);
+    flex:1 1 0;min-height:0;
+    background:#111;border-radius:12px;
+    padding:clamp(8px,1vw,14px) clamp(12px,1.4vw,20px);
+  }
+  .beat-title{color:#fff}
+  .beat-artist{color:#8a8a8a;font-size:11px;letter-spacing:.04em;margin:0}
+  /* The cover is the keypad, so it stays square: it takes the height of its
+     own row and its width follows from that. */
+  .beat img{height:100%;width:auto;aspect-ratio:1/1;flex:none;object-fit:cover}
+  .beat-meta{flex:1;min-width:0}
+  .beat-title{margin:0 0 2px;font-size:13px;letter-spacing:.02em}
+  .beat audio{width:100%;height:36px;display:block;margin-top:6px}
+  /* The idea, in one line directly under the name. A clear step down from it —
+     the name is the thing being announced, this is what it means — and written
+     short enough to hold to a single line in the column it shares with the
+     name. The picture takes the space it used to fill. */
+  .camp-head .short{
+    font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+    font-size:1rem;
+    line-height:1.625;
+    margin:0;
+  }
+  /* The piece's own thumbnail, opening the campaign. Its corners match the one
+     it was clicked from, so the two read as the same object arriving. Unlike
+     the pieces below it, it runs the full width of its column — which ends
+     where the rule at the foot ends — so the campaign opens on the same
+     measure the rest of the site is built to. */
+  .step-media img.opener{
+    border-radius:10px;
+    width:100%;
+    max-width:100%;
+    max-height:none;
+    height:auto;
+  }
+
+
+  .hint{
+    font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+    font-size:.875rem;
+    line-height:1.6;
+    min-height:1.6em;
+    margin:1.5rem auto 0;
+  }
+
+  @media (prefers-reduced-motion:reduce){
+    .ch{transition:none}
+  }
+</style>
+</head>
+<body>
+
+<main><div id="stage"></div><div class="zine" id="zine"></div></main>
+
+<footer>
+  <p class="prompt" id="prompt"></p>
+  <div class="marks">
+    <button class="ring-button" id="ring" aria-label="Another"><span class="ring"></span></button>
+    <button class="ring-button" id="leaf" aria-label="A photograph, and what it turned into"><span class="ring box"></span></button>
+  </div>
+  <div class="rule"></div>
+  <div class="bar">
+    <button class="sig" id="btn-sig">SALVA.</button>
+    <nav class="nav">
+      <button id="btn-work" aria-pressed="false">Work</button>
+      <button id="btn-about" aria-pressed="false">About</button>
+    </nav>
+  </div>
+</footer>
+
+<script>
+(() => {
+  // Things worth writing down, in no order and for no reason. A line with
+  // more than one sentence in it is broken at the full stop and set one under
+  // the other, so it lands a beat at a time rather than as a paragraph.
+  const LINES = [
+    "When someone dives into a movie, I hold my breath to see if I survive.",
+    "Walking fast makes you look stupid.\nWalking slow does too.",
+    "If there's a bathroom in your dream, don't go in.\nIt's a trap.",
+    "Writing badly is bad.\nNot writing is worse.",
+    "Birthday Jell-O tastes worse in exact proportion to how many colors it has.",
+    "Star Wars bores me.",
+    "Cappuccino at any hour, even with a last name like Scala.",
+    "Patatas bravas make me mad.",
+    "Real soap is bar soap.",
+    "Relationships are like fingernails.\nYou never notice them growing until it's time to cut them.",
+    "Peeing whenever I want beats staring at clouds.\nAisle seat, no debate.",
+    "Popcorn is salty.",
+    "I wash my underwear every Sunday.\nI only own seven pairs.",
+    "I once asked Santa for a BlackBerry so I could chat with \"the love of my life.\"\nHow embarrassing.",
+    "My red Nescafé mug is my favorite.\nThe few days I don't use it end up being bad ones.\nI don't think my life depends on a mug.\nOr does it?",
+    "Printers can smell when you're in a hurry.",
+    "Some people don't wash their feet in the shower.\nThe one part standing between them and the floor.",
+    "You can learn a lot about someone by asking about their first email address.",
+    "Asking for condoms at the pharmacy embarrasses me.\nAsking for the morning-after pill embarrasses me more.",
+    "Our first teachers are the most important ones, and the first ones we forget.",
+    "Reply right away and you come off as intense.\nReply too late and you come off as uninterested.",
+    "A single man's best friend is an air fryer.",
+    "You could make up a Bible verse and I'd believe you.\nNever read it.",
+    "Watching dubbed movies is for psychopaths.",
+    "Mom, animation and cartoons are not the same thing.",
+    "Young people shouldn't sit down on the metro."
+  ];
+
+  // Sits over the circle when you arrive, and goes once you have pressed it.
+  const PROMPT = "press the circle below to begin";
+
+  // Set as verse. Every full stop inside a block drops the next sentence onto
+  // its own line with nothing between them, and only the blocks are given the
+  // blank line — so the beats still read as six, but each sentence lands on
+  // its own instead of running into the one after it.
+  const ABOUT =
+    "Choir and altar boy. Not out of faith, it just got me out of class.\n\n" +
+
+    "Math, sports, art. Everything I was supposed to be good at, I suck at.\n" +
+    "The one thing I could do was make people laugh. Dad included.\n" +
+    "Until he saw my grades.\n\n" +
+
+    "Communications seemed like the only option. Talking was the only skill I had.\n\n" +
+
+    "My mom told her friends they'd see me on TV one day. She was right.\n" +
+    "I wasn't the reporter. I was the news.\n\n" +
+
+    "I still can't explain to my dad what I do for a living.\n" +
+    "My best joke was telling him I wanted to live off my creativity.\n" +
+    "He quoted Brad Pitt in Once Upon a Time in Hollywood.\n" +
+    "\"Fucking hippies, motherfuckers.\"\n\n" +
+
+    "I still can't tell the difference between wit and stupidity.\n" +
+    "But it pays, so call me whatever you want.";
+
+  // A line each, said the way you would say it out loud, not the way it went
+  // in the deck. They only turn up when you point at the piece.
+  const WORK = [
+    { name: "Back in Smoothly", img: "assets/back-in-smoothly.jpg",
+      line: "Nobody reverses well.",
+      idea: "A lubricant, advertised on the reverse camera.",
+      // `label` is what the name reads as once you have scrolled past the
+      // opening row; `note` is the line under it. The two never say the same
+      // word twice — the label names the medium, the line says what was done
+      // with it.
+      execs: [
+        // Two of them, each shown twice: the sticker as it was printed and the
+        // same sticker as the reversing camera finds it. The pair turns over on
+        // the second line, so the print and the screen never stack in a column
+        // of their own — the same rule the trash campaign is laid out on.
+        { label: "Prints", img: "assets/bis-prints.webp",
+          note: "Stuck up in hotel car parks, and in the car parks near them." },
+        { label: "Film", video: "assets/bis-2-film.mp4", poster: "assets/bis-2-film-poster.jpg",
+          note: "Thirty seconds of it, run as a YouTube ad." },
+        // Two runs of it side by side, cropped to the handsets: the sticker you
+        // are reversing towards is a different one every time, which is the
+        // whole of the game and cannot be shown in one frame.
+        // Two runs of it, one either side of the code off the ad — the sticker
+        // you are reversing towards is a different one each time, which is the
+        // whole of the game and cannot be shown in a single frame. The code in
+        // the middle is the one printed on the ad, at a size a phone can still
+        // read off a screen, and it opens the game.
+        { label: "Online pop-up game",
+          phones: ["assets/bis-phone-1.webp", "assets/bis-phone-2.webp"],
+          stills: ["assets/bis-phone-1-still.jpg", "assets/bis-phone-2-still.jpg"],
+          qr: "assets/bis-qr.png",
+          href: "https://thelifeofpita.github.io/backingame/",
+          note: "Playable inside the ad itself. Scan the code and it opens." }
+      ] },
+    // The thumbnail is one of the close-ups: at the size the home page shows
+    // it, the stitching reads and a whole garment on a wall does not.
+    { name: "Ads from Trash",   img: "assets/ads-from-trash-thumb.webp",
+      line: "The poster was already in the bin.",
+      // The whole campaign in one frame: four garments, a line each, and every
+      // close-up sat next to the piece it was cut from — the same ad seen
+      // twice, once for what it says and once for how it was made. The pair
+      // turns over on every line, so the closes fall on a diagonal instead of
+      // stacking into a column of cloth down one side.
+      execs: [
+        // Square blocks in a wide column: left to run the full measure they
+        // stand taller than the screen the scroll rests on, so each is given
+        // the height a flat piece would have and centred in the column. Both
+        // land whole inside the same stop the rest of the campaign uses.
+        { label: "OOH", img: "assets/ads-from-trash-ooh-1.webp",
+          note: "Taped to the walls the donation bins stand against." },
+        // The other four. The head and the line do not change, so the second
+        // screen reads as more of the same run rather than a new piece — which
+        // is what it is, and what lets eight shots have the room four had.
+        { label: "OOH", img: "assets/ads-from-trash-ooh-2.webp",
+          note: "Taped to the walls the donation bins stand against." }
+      ] },
+    { name: "Pick a Side",      img: "assets/pick-a-side.jpg",
+      line: "Fries, or the country?",
+      execs: [
+        { label: "Videocase", note: "Cut to show how it worked.",
+          video: "assets/pick-a-side.mp4",
+          poster: "assets/pick-a-side-poster.jpg" }
+      ] },
+    { name: "Numpad Jam",       img: "assets/numpad-jam.jpg",
+      line: "Nine keys, no lyrics.",
+      idea: "A whole record built off one numeric keypad.",
+      // The videocase leads wherever there is one: it is the piece that says
+      // what the campaign was, and everything after it is evidence.
+      execs: [
+        { label: "Videocase", note: "Cut to show how the record was made.",
+          video: "assets/numpad-jam.mp4",
+          poster: "assets/numpad-jam-poster.jpg" },
+        // The full 360, shot on black. The black comes out frame by frame by
+        // contiguity — filled from the edges of the frame inwards — so the
+        // dark that belongs to the object survives: the legends, the speaker
+        // holes, the jack throats. A flat colour key would have taken those
+        // too.
+        //
+        // The background is then laid straight onto paper white rather than
+        // punched out to alpha. With alpha, the animation ghosted: a frame
+        // whose silhouette is narrower than the last one's lets the last one
+        // show through where it is transparent, and the turn dragged a fan of
+        // every angle behind it. Every pixel opaque, there is nothing left for
+        // a later frame to show through. This piece can only ever sit on #fff
+        // — which is the whole page, and the reason it is safe.
+        //
+        // Held on a still until you reach the row, the same as Movistar's, so
+        // the turn starts when you arrive at it rather than halfway through.
+        { label: "The keypad", img: "assets/numpad-jam-keypad-still.webp",
+          gif: "assets/numpad-jam-keypad.webp",
+          note: "The one it was played on. Nothing else was." },
+        // Four pieces in one frame, two to a row. The mockups came on their
+        // own backgrounds, so each one is filled back to #fff from the edges
+        // in and then cropped to what is actually there — which is what lets
+        // four shots of different garments sit at one scale.
+        // Four of the takes the comments left behind, named after the numbers
+        // that made them.
+        { label: "The beats", cover: "assets/numpad-jam-beat-cover.jpg",
+          note: "The comments composed it. Fifteen seconds of each.",
+          tracks: [
+            { title: "04070477",   src: "assets/numpad-jam-beat1.mp3" },
+            { title: "11588361",   src: "assets/numpad-jam-beat2.mp3" },
+            { title: "92596",      src: "assets/numpad-jam-beat3.mp3" },
+            { title: "2628268286", src: "assets/numpad-jam-beat4.mp3" }
+          ] },
+        { label: "Merch", img: "assets/numpad-jam-merch.webp",
+          note: "Four pieces. Every one of them numbered." },
+        // The record itself, on the page it was made on. Last, because it is
+        // the one piece that takes you off this site.
+        // The name says it; the column beside it is just the way through. No
+        // line under the name here — there is nothing to explain that pressing
+        // it does not already do.
+        { label: "Try it yourself", link: "https://www.youtube.com/watch?v=HlXeVnXsTjc",
+          linkText: "Click here", note: "" }
+      ] },
+    // The thumbnail is a screen rather than a photograph: the name written in
+    // lit pixels on the grid of unlit ones around them, with the phone's own
+    // full circle between the two words. Nothing is anti-aliased — a pixel on
+    // a display is on or it is off, and the shapes are what the grid can make.
+    { name: "Tracking Life",    img: "assets/tracking-life-thumb.webp",
+      line: "Counts everything.\nUnderstands nothing.",
+      idea: "A sensor for the one number nobody sells you.",
+      execs: [
+        { label: "Videocase", note: "Cut to show how it worked.",
+          video: "assets/tracking-life.mp4",
+          poster: "assets/tracking-life-poster.jpg" }
+      ] },
+    { name: "Movistar",         img: "assets/movistar.jpg",
+      line: "Wanna get bored?",
+      idea: "Ten seconds of nothing, bought and handed back.",
+      execs: [
+        // The film was shot upright and stays upright. Its frame still runs the
+        // full width of the column, so it sits on the same two edges as
+        // everything else, and the film is centred inside it — on the same
+        // middle as the thumbnail above it.
+        { label: "Film", img: "assets/movistar-still.jpg",
+          gif: "assets/movistar.gif", upright: true,
+          note: "Ten seconds of it: no sound, no movement, nothing to skip." }
+      ] }
+  ];
+
+  // What the left third says when nothing is being pointed at. It is written
+  // on arrival, at the rhythm the home page writes at, and it is what the line
+  // falls back to when the cursor leaves a piece.
+  const RESTING = "Few stuff.";
+
+  // Set against the .15s ink transition, this leaves two or three characters
+  // pale at the writing edge at any moment — the marker that shows where the
+  // words are entering. Measured off the reference, which carries the same.
+  const PER = 60;                       // ms between one character and the next
+  const INK = 150;                      // how long one character takes to darken
+  // How long the clicked picture takes to reach its place in the campaign. The
+  // idea underneath the name is written to this same measure, so the two land
+  // together rather than one waiting on the other.
+  const FLIGHT = 600;
+
+  const stage = document.getElementById("stage");
+  const main = document.querySelector("main");
+  const footer = document.querySelector("footer");
+  const ring = document.getElementById("ring");
+  const buttons = {
+    about: document.getElementById("btn-about"),
+    work: document.getElementById("btn-work")
+  };
+
+  // ── The zine ──────────────────────────────────────────────────────────────
+  // Three pages, scanned off the cloth they were shot on and left with their
+  // own paper: the tone, the grain, the light that fell on them, the comb of
+  // tabs along the top edge. Nothing corrected. A page is what the square
+  // hands you, and the square hands you another every time it is pressed.
+  // Shot on film around Madrid and Toledo, and written off afterwards: the
+  // line is not a caption for the picture, it is what looking at it turned
+  // into. The square deals one at random, picture first, writing under it.
+  // Twelve sheets. Each one is the photograph and the note under it, scanned
+  // together — the writing is on the page, not laid over it by the browser, so
+  // a press hands you one whole thing and there is nothing here to lay out.
+  const PERSONAL = [
+    "assets/pp-fear-page.webp",
+    "assets/pp-toledo-page.webp",
+    "assets/pp-grass-page.webp",
+    "assets/pp-urinals-page.webp",
+    "assets/pp-works-page.webp",
+    "assets/pp-smiley-page.webp",
+    "assets/pp-pigeon-page.webp",
+    "assets/pp-alien-page.webp",
+    "assets/pp-1919-page.webp",
+    "assets/pp-church-page.webp",
+    "assets/pp-sun-page.webp",
+    "assets/pp-flowers-page.webp"
+  ];
+  const zineLayer = document.getElementById("zine");
+  let zineAt = -1;
+
+  // Not a wipe. A wipe is a machine. This is a hand drawing one sheet up over
+  // the last, in as many goes as it takes and no two of them the same length:
+  // the page is uncovered in bands from the foot upwards, each band held for
+  // its own moment, each one landing a hair off the line the one before it
+  // left. The whole point is that it is not even — even would read as an
+  // animation, and this has to read as paper being moved by somebody.
+  const OUT = 220, IN = 420;            // match the transitions on .zine img
+  let zineGen = 0;                      // only the newest press gets to land
+
+  // A page comes up on opacity and the one it replaces goes with it. Both lie
+  // in the same place, so nothing moves and nothing is revealed — one is
+  // simply there instead of the other.
+  const nextLeaf = () => {
+    const mine = ++zineGen;
+    let n = zineAt;
+    while (n === zineAt && PERSONAL.length > 1) n = Math.floor(Math.random() * PERSONAL.length);
+    zineAt = n;
+    const shot = PERSONAL[n];
+
+    zineLayer.classList.add("on");
+    main.classList.add("leafing");
+
+    // Decoded before it is ever put on the page, so what comes up is a whole
+    // sheet rather than one filling in while it fades.
+    const leaf = document.createElement("figure");
+    leaf.className = "leaf";
+    const shotImg = document.createElement("img");
+    shotImg.alt = "";
+    shotImg.decoding = "async";
+    leaf.appendChild(shotImg);
+
+    const ready = new Promise((done) => {
+      shotImg.addEventListener("load", done, { once: true });
+      shotImg.addEventListener("error", done, { once: true });
+      setTimeout(done, 900);            // a file that never answers still gets its turn
+      shotImg.src = shot;
+      if (shotImg.complete && shotImg.naturalWidth) done();
+    });
+
+    // And the paper is empty before it arrives.
+    const standing = zineLayer.querySelector(".leaf");
+    const cleared = new Promise((done) => {
+      if (!standing) return done();
+      standing.classList.remove("up");
+      standing.classList.add("down");
+      setTimeout(done, OUT);
+    });
+
+    Promise.all([ready, cleared]).then(() => {
+      if (mine !== zineGen) return;     // a later press has taken this one's place
+      zineLayer.replaceChildren(leaf);  // one sheet, always — nothing left under it
+      void leaf.offsetWidth;            // let opacity:0 be painted first
+      leaf.classList.add("up");
+      // And that is the end of it. The writing arrived with the picture,
+      // because on this page they are the same object.
+    });
+  };
+
+  // Anything else you press puts the zine down. It is a thing you look at, not
+  // a place you are in.
+  const closeZine = () => {
+    if (!zineLayer.classList.contains("on")) return;
+    zineLayer.classList.remove("on");
+    main.classList.remove("leafing");
+    zineLayer.replaceChildren();
+  };
+
+  let view = "text";
+  let last = -1;
+
+  // The delay lives on each character as a transition-delay, so the run is
+  // driven by the compositor rather than by a pile of timers, and it cannot
+  // drift out of step with itself.
+  // One way of putting words on the page, used for every one of them: the
+  // opening line, a thought, the about, and the line under a piece of work.
+  // `per` is the gap between one character and the next. It defaults to the
+  // rhythm the home page writes at, and is only ever passed in when the writing
+  // has to keep time with something else on the page.
+  const typeInto = (node, text, per) => {
+    const step = per || PER;
+    const frag = document.createDocumentFragment();
+    [...text].forEach((chr, i) => {
+      const s = document.createElement("span");
+      s.className = "ch";
+      s.textContent = chr;
+      s.style.animationDelay = (i * step) + "ms";
+      frag.appendChild(s);
+    });
+    node.replaceChildren(frag);
+    node.classList.remove("off");
+    node.style.setProperty("--per", step + "ms");  // the block lasts one slot
+    // And the wake behind it is always the same two and a half characters,
+    // whatever the step. At the home page's 60ms this is the 150ms it has
+    // always been; nothing there changes.
+    node.style.setProperty("--ink", Math.round(step * 2.5) + "ms");
+    node.classList.remove("on");
+    void node.offsetWidth;              // let the pale state paint first
+    node.classList.add("on");
+  };
+
+  // The circle empties out while a line is going down and fills again the
+  // moment it has landed.
+  let ringTimer;
+  const ringWhileWriting = (chars, per) => {
+    const dot = ring.querySelector(".ring");
+    clearTimeout(ringTimer);
+    dot.classList.add("hollow");
+    ringTimer = setTimeout(() => dot.classList.remove("hollow"), chars * (per || PER) + 150);
+  };
+
+  const write = (text, extra, per) => {
+    const p = document.createElement("div");
+    p.className = extra ? "prose " + extra : "prose";
+    stage.replaceChildren(p);
+    typeInto(p, text, per);
+    ringWhileWriting([...text].length, per);
+  };
+
+  const sync = () => {
+    closeZine();                        // any move of the page puts the zine down
+    buttons.about.setAttribute("aria-pressed", String(view === "about"));
+    buttons.work.setAttribute("aria-pressed", String(view === "work"));
+    main.classList.toggle("reading", view === "about");
+    main.classList.toggle("wide", view === "work" || view === "campaign");
+    main.classList.toggle("full", view === "campaign");
+    // The line over the circle belongs to the opening screen and to nowhere
+    // else. Leave the home page — for work, for a campaign, for the bio — and
+    // it goes, whether or not the circle has been pressed yet.
+    prompt.classList.toggle("gone", view !== "text" || promptSpent);
+    prompt.classList.remove("on");
+    if (view !== "text" || promptSpent) prompt.textContent = "";
+    window.scrollTo(0, 0);
+  };
+
+  // Drawn rather than rolled for. Rolling a die every press means the same
+  // line can turn up twice in three goes and half of them never turn up at
+  // all, which reads as a short list badly shuffled. So the whole set is
+  // shuffled once and dealt out one at a time, and only when the last one has
+  // been dealt is the set shuffled again — every line is seen once before any
+  // line is seen twice. The one carry-over: a fresh deal never opens on the
+  // line the last one closed on, or the join would look like a repeat.
+  let bag = [];
+  const deal = () => {
+    if (!bag.length) {
+      bag = LINES.map((_, i) => i);
+      for (let i = bag.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        const t = bag[i]; bag[i] = bag[j]; bag[j] = t;
+      }
+      if (bag.length > 1 && bag[0] === last) bag.push(bag.shift());
+    }
+    return bag.shift();
+  };
+
+  const showText = () => {
+    last = deal();
+    view = "text";
+    sync();
+    write(LINES[last]);
+  };
+
+  const prompt = document.getElementById("prompt");
+
+  let promptTimer;
+  let promptSpent = false;              // pressed once, and it is gone for good
+
+  // Pressing the circle retires the prompt from the whole site — not just from
+  // this view. Nothing puts it back.
+  const clearPrompt = () => {
+    promptSpent = true;
+    clearTimeout(promptTimer);
+    // That timer was carrying two things: the prompt, and the raising of
+    // everything else at the foot of the page. Cancelling it to be rid of the
+    // prompt took the circle, the square, the rule and the two words with it,
+    // and nothing put them back. Whatever else happens here, the furniture is
+    // up — it is not the prompt's to take away.
+    footer.classList.add("shown");
+    prompt.classList.add("gone");
+    setTimeout(() => { prompt.textContent = ""; }, 400);
+  };
+
+  // The page arrives blank with a sentence being written on it. Once that has
+  // landed it holds still for a second, and only then does the rest of the
+  // furniture turn up — prompt, circle and the two words, all together.
+  const raiseFurniture = (afterMs) => {
+    clearTimeout(promptTimer);
+    promptTimer = setTimeout(() => {
+      if (!promptSpent) prompt.textContent = PROMPT;
+      footer.classList.add("shown");
+    }, afterMs + 1000);
+  };
+
+  // Written at the site's one speed, the same as a line on the home page —
+  // no rhythm of its own. Given its own it was three times faster, and two
+  // texts writing themselves at two speeds on the same page read as two
+  // different mechanisms, however alike the writing edge is made to look.
+  // It is a long piece, so it takes as long as it takes.
+  // Half the writing speed of the home page. Not a different animation — the
+  // wake is still the same two and a half characters, since the ink time is
+  // set against the step — only a faster hand.
+  const ABOUT_PER = Math.round(PER / 2);
+
+  // Each block is its own element rather than two newlines inside one, which
+  // is the only way the space between blocks can be anything other than a
+  // whole blank line. The characters go on being numbered straight through
+  // all of them, so it is still one continuous piece of writing that happens
+  // to be built out of six pieces.
+  const typeBlocks = (node, blocks, per) => {
+    const step = per || PER;
+    let i = 0;
+    node.replaceChildren();
+    blocks.forEach((block) => {
+      const para = document.createElement("p");
+      [...block].forEach((chr) => {
+        const s = document.createElement("span");
+        s.className = "ch";
+        s.textContent = chr;
+        s.style.animationDelay = (i++ * step) + "ms";
+        para.appendChild(s);
+      });
+      node.appendChild(para);
+    });
+    node.style.setProperty("--per", step + "ms");
+    node.style.setProperty("--ink", Math.round(step * 2.5) + "ms");
+    node.classList.remove("on");
+    void node.offsetWidth;              // let the pale state paint first
+    node.classList.add("on");
+  };
+
+  const showAbout = () => {
+    view = "about";
+    sync();
+    const p = document.createElement("div");
+    p.className = "prose bio";
+    // The one thing on the site that is a document rather than a piece of
+    // work. It waits until the writing above it has landed — offered after the
+    // reading, not alongside it.
+    const cv = document.createElement("a");
+    cv.className = "cv-link";
+    cv.href = "assets/salvatore-scala-cv.pdf";
+    cv.target = "_blank";
+    cv.rel = "noopener";
+    cv.textContent = "C.V.";
+    stage.replaceChildren(p, cv);
+    typeBlocks(p, ABOUT.split("\n\n"), ABOUT_PER);
+    ringWhileWriting([...ABOUT].length, ABOUT_PER);
+    fitBio();
+    setTimeout(() => {
+      if (view === "about") cv.classList.add("on");
+    }, [...ABOUT].length * ABOUT_PER + 200);
+  };
+
+  // There is to be no scroll on the bio, on any screen. Nineteen lines of
+  // verse at a fixed size cannot promise that — a short window will always
+  // come along — so the size is not fixed: it is whatever makes the whole
+  // piece fit the room it has, and never more than the 18px it is designed
+  // at. Height scales with the font size exactly, since the leading is a
+  // multiple of it, so one measurement gives the answer outright rather than
+  // by trying sizes until one fits.
+  const FLOOR = 10;                     // below this it is no longer reading
+  const fitBio = () => {
+    const node = stage.querySelector(".prose.bio");
+    if (!node) return;
+    node.style.fontSize = "";           // back to the designed size to measure
+    const room = stage.clientHeight;
+    const colW = node.clientWidth;
+    if (!room || !colW) return;
+    const base = parseFloat(getComputedStyle(node).fontSize);
+
+    // Two things can be too big, and the width is the one that bites first
+    // now that sentences share a line. A verse line that runs into the edge
+    // of the page and wraps has been broken somewhere nobody chose, which
+    // looks like a mistake rather than a line. So the longest is measured as
+    // it would actually be set, and the size that keeps it on one row is the
+    // ceiling.
+    const probe = document.createElement("span");
+    probe.style.cssText =
+      "position:absolute;left:-9999px;visibility:hidden;white-space:pre";
+    probe.style.font = getComputedStyle(node).font;
+    document.body.appendChild(probe);
+    let widest = 0;
+    node.querySelectorAll("p").forEach((para) => {
+      para.textContent.split("\n").forEach((line) => {
+        probe.textContent = line;
+        widest = Math.max(widest, probe.getBoundingClientRect().width);
+      });
+    });
+    probe.remove();
+
+    let size = widest > colW ? Math.floor(base * colW / widest) : base;
+    node.style.fontSize = size + "px";
+
+    // Then down a pixel at a time until the whole piece is inside the room it
+    // has. Measured rather than calculated: the leading rounds to whole
+    // pixels, so the height is not a straight multiple of the size.
+    while (size > FLOOR && node.scrollHeight > room) {
+      size--;
+      node.style.fontSize = size + "px";
+    }
+  };
+
+  // The name is written first and alone. Only when the last letter has landed
+  // does anything else arrive, and it arrives all at once.
+  // A row is a little shorter than the column, so the next one shows beneath
+  // it. That leftover has to be given back as padding at the top and bottom,
+  // or the first row can never come to rest in the middle of the page — there
+  // would be nothing above it to scroll against.
+  const fitCampaign = () => {
+    const sc = stage.querySelector(".camp-scroll");
+    if (!sc) return;
+    // The column's own height, and nothing taken off it. Its height is fixed,
+    // so clientHeight does not grow with the padding — subtracting the padding
+    // we ourselves set made this shrink a little every time the fitting ran
+    // again, and a row that had been exactly centred drifted off centre. The
+    // first row was then already a quarter of the way to the next one before
+    // the reader had touched anything.
+    const H = sc.clientHeight;
+    // The gap between one piece and the next is the same everywhere, whatever
+    // the pieces are. Rows all one height cannot do that: a long picture and a
+    // 16:9 film leave very different amounts of air inside the same box, and
+    // the distance from the foot of one to the head of the next changes with
+    // every piece. So each row is its own piece plus the gap — half of it
+    // above, half below — and the distance between any two is exactly GAP.
+    const GAP = 96;
+    const steps = [...sc.querySelectorAll(".step")];
+
+    // An upright piece is given the height a flat one would have in the same
+    // column, so its row is the same depth as every other row and the rhythm
+    // of the scroll does not change when you reach it. Set before the rows are
+    // measured, not after — measured first, the row would be built around the
+    // height the film happened to have at that moment and then the film would
+    // change underneath it.
+    const flatH = Math.round((sc.querySelector(".step-media")?.clientWidth || 0) * 9 / 16);
+    sc.querySelectorAll("img.upright").forEach((im) => {
+      if (flatH) im.style.height = flatH + "px";
+    });
+    // The tracks are given that same height between them, so four of them
+    // stacked come to exactly what one flat picture would, and the row keeps
+    // the rhythm of the column instead of collapsing to the size of a cover.
+    sc.querySelectorAll(".beats, .phones").forEach((b) => {
+      if (flatH) b.style.height = flatH + "px";
+    });
+    // The square blocks are the one piece that should take the screen rather
+    // than the column's usual depth — four garments in one frame need the room.
+    // Held to whichever is smaller, the stop the scroll rests in or the width
+    // of the column, so the whole block is always inside the safe zone.
+    const colW = sc.querySelector(".step-media")?.clientWidth || 0;
+    const bigH = Math.round(Math.min(H * 0.82, colW));
+    sc.querySelectorAll("img.big").forEach((im) => {
+      if (bigH > 0) im.style.height = bigH + "px";
+    });
+
+    const heights = steps.map((s) => {
+      // `.beats` first: a tracks row has covers in it, and measuring the first
+      // of those instead of the block gave the row the height of a thumbnail —
+      // which is what left the pieces above and below it sitting on top of it.
+      const m = s.querySelector(".beats, .phones, .media-text-link, img, video");
+      const h = m ? m.getBoundingClientRect().height : 0;
+      // Before a picture has loaded it measures nothing; fall back to the
+      // shape of the column so the rows are never all collapsed at once.
+      const guess = h || Math.round(s.clientWidth * 9 / 16);
+      return Math.round(guess) + GAP;
+    });
+    steps.forEach((s, i) => { s.style.height = heights[i] + "px"; });
+    // The first and last rows each have to be able to sit in the middle, and
+    // they are not the same height, so they do not get the same padding.
+    const padTop = Math.max(0, Math.round((H - heights[0]) / 2));
+    const padBottom = Math.max(0, Math.round((H - heights[heights.length - 1]) / 2));
+    sc.style.paddingTop = padTop + "px";
+    sc.style.paddingBottom = padBottom + "px";
+  };
+
+  // Which row is the current one is worked out from where the column actually
+  // sits, not watched for by an observer. An observer only ever speaks up when
+  // something crosses its threshold, so a layout it did not see coming — a
+  // video handed back from fullscreen, above all — can leave it silent with no
+  // row marked at all. Every row then sits at its dimmed opacity and the page
+  // reads as a white wash over the text. Measured, there is always exactly one.
+  // The line under the campaign name, swapped as the scroll moves from one
+  // piece to the next. Never cut: the line leaving drops out, and only then is
+  // the new one put in and brought up, so no text is ever seen changing.
+  // The line under the campaign name is not played to a clock — it is drawn to
+  // wherever the scroll happens to be. `f` is the position between the rows: 2
+  // means the third row is dead centre, 2.5 means exactly halfway to the next.
+  // A row at its centre has its line fully written; halfway between two rows
+  // there is nothing on the page at all. So the words come away letter by
+  // letter as you push down and the next line finishes writing itself exactly
+  // as you arrive — and it all runs backwards if you scroll back up, because
+  // nothing here is a sequence being played, only a position being read.
+  // One element, written to however much of it this scroll position has
+  // earned. Same three states the writing has everywhere else: ink for what is
+  // down, pale for the last couple still landing, the block on the edge.
+  const scrub = (el, text, held) => {
+    if (!el) return;
+
+    // The swap happens at the halfway mark, where nothing is showing, so no
+    // reader ever sees one line become another.
+    if (el.dataset.text !== text) {
+      el.dataset.text = text;
+      el.classList.remove("on", "off");
+      el.replaceChildren(...[...text].map((chr) => {
+        const s = document.createElement("span");
+        s.className = "ch";
+        s.textContent = chr;
+        return s;
+      }));
+    }
+
+    const shown = Math.round(held * text.length);
+    // The wake and the block belong to a line still being written. A finished
+    // one has neither: the block sits over the character it is writing, so on
+    // a line that has stopped it just parks on the last one and hides it —
+    // which is why a settled sentence was arriving with its full stop missing.
+    const writing = shown < text.length;
+    [...el.children].forEach((c, k) => {
+      c.classList.toggle("shown", k < shown);
+      c.classList.toggle("edge", writing && k < shown && k >= shown - 2);
+      c.classList.toggle("tip", writing && k === shown - 1);
+    });
+  };
+
+  const paintHead = (camp, steps, f) => {
+    const head = camp && camp.querySelector(".camp-head");
+    if (!head) return;
+    const i = Math.max(0, Math.min(steps.length - 1, Math.round(f)));
+
+    // A row owns the ground around it, not just the point at its centre. Come
+    // within SAFE of it and the column is simply written, whole — the reader
+    // is not asked to land on a pixel to be allowed to read it. Only past that
+    // does it start coming away, and it has to be all the way gone by the
+    // halfway mark, where the next row takes over.
+    const SAFE = 0.25;
+    const d = Math.abs(f - i);
+    const held = d <= SAFE ? 1 : Math.max(0, 1 - (d - SAFE) / (0.5 - SAFE));
+
+    // Both answer to the same position, so they come away together and land
+    // together: the campaign's name unwrites as you push down and the medium
+    // it is now showing — Prints, Film, Videocase — writes itself into the
+    // place the name was, with its own line forming underneath.
+    // Two rows of the same piece — the eight prints of one campaign, split in
+    // two only because four of them will not fit a screen — carry the same
+    // head and the same line. Unwriting a word to write the identical word
+    // back reads as a fault, so between two rows that say the same thing the
+    // column is simply held. It comes away only at a real change.
+    const j = f > i ? Math.min(steps.length - 1, i + 1) : Math.max(0, i - 1);
+    const sameAsNeighbour = j !== i &&
+      (steps[j].dataset.head || "") === (steps[i].dataset.head || "") &&
+      (steps[j].dataset.line || "") === (steps[i].dataset.line || "");
+    const hold = sameAsNeighbour ? 1 : held;
+
+    scrub(head.querySelector("h1"), steps[i].dataset.head || "", hold);
+    scrub(head.querySelector(".short"), steps[i].dataset.line || "", hold);
+  };
+
+  const markCurrent = (sc, paint) => {
+    sc = sc || stage.querySelector(".camp-scroll");
+    if (!sc) return;
+    const steps = [...sc.querySelectorAll(".step")];
+    if (!steps.length) return;
+
+    // Where the middle of the column falls among the rows, as a fraction.
+    // Taken from the rows' own boxes rather than from scrollTop, so it stays
+    // right whatever padding the fitting has put above and below them.
+    const middle = sc.getBoundingClientRect().top + sc.clientHeight / 2;
+    const mids = steps.map((s) => {
+      const b = s.getBoundingClientRect();
+      return b.top + b.height / 2;
+    });
+    let f = 0;
+    if (middle <= mids[0]) f = 0;
+    else if (middle >= mids[mids.length - 1]) f = mids.length - 1;
+    else {
+      for (let i = 0; i < mids.length - 1; i++) {
+        if (middle >= mids[i] && middle <= mids[i + 1]) {
+          const span = mids[i + 1] - mids[i];
+          f = i + (span ? (middle - mids[i]) / span : 0);
+          break;
+        }
+      }
+    }
+    const nearest = steps[Math.max(0, Math.min(steps.length - 1, Math.round(f)))];
+
+    // The fixed column answers to where the scroll is, letter by letter.
+    if (paint !== false) paintHead(sc.parentElement, steps, f);
+
+    steps.forEach((s) => {
+      const here = s === nearest;
+      s.classList.toggle("now", here);
+      // Reaching a row starts its gif; leaving puts the still back, which also
+      // winds it to the beginning for next time.
+      // All of them, not the first: the pop-up game row carries two handsets,
+      // and asking for one left the second one holding its still for good.
+      s.querySelectorAll("img[data-gif]").forEach((g) => {
+        const want = here ? g.dataset.gif : g.dataset.still;
+        if (!g.src.endsWith(want)) g.src = want;
+      });
+      // A film left behind stops. It holds its place rather than winding back,
+      // so scrolling to it again picks up where it was. Playing on in a row
+      // nobody is looking at is the one thing it must not do.
+      const v = s.querySelector("video");
+      // — except one that is filling the screen, by either route. A film over
+      // the whole viewport is the only thing being looked at, whatever the
+      // column behind it thinks.
+      const big = document.fullscreenElement === v || (v && v.classList.contains("blown"));
+      if (v && !here && !v.paused && !big) v.pause();
+    });
+  };
+
+  // A video coming back from fullscreen is re-laid-out over the next frame or
+  // two, so nothing is measured until that has happened — and it is measured
+  // again a moment later, since the browser is not done moving things at the
+  // instant it says it is.
+  const settleCampaign = () => {
+    if (document.fullscreenElement) return;
+    fitCampaign();
+    markCurrent();
+  };
+
+  // Taking a film to the whole screen, by whatever route the browser will
+  // allow. `requestFullscreen` is the one to want, but it is refused in more
+  // places than it looks: an embedded view, a webview, a page the permission
+  // has not been granted to — and it refuses quietly, which leaves a button
+  // that does nothing and no way to tell why. So the request is made, and if
+  // it is turned down the film is blown up inside the page instead: fixed to
+  // the viewport, over everything, black behind it. Not the same thing, but
+  // the same result for the person watching, and it cannot be refused.
+  const shrink = (v) => {
+    v.classList.remove("blown");
+    document.body.classList.remove("blown-out");
+  };
+
+  const blowUp = (v) => {
+    if (v.classList.contains("blown")) return shrink(v);
+    if (document.fullscreenElement) { document.exitFullscreen(); return; }
+    let ask;
+    try { ask = v.requestFullscreen && v.requestFullscreen(); } catch (e) { ask = null; }
+    Promise.resolve(ask).then((r) => {
+      // A browser that has no requestFullscreen at all resolves undefined, so
+      // the absence of an error is not proof that anything happened.
+      if (!document.fullscreenElement) throw new Error("not honoured");
+    }).catch(() => {
+      // iOS puts fullscreen on the video rather than on the document.
+      if (v.webkitEnterFullscreen) { try { v.webkitEnterFullscreen(); return; } catch (e) {} }
+      v.classList.add("blown");
+      document.body.classList.add("blown-out");
+    });
+  };
+
+  // The control's own fullscreen button goes through the same request, and
+  // when that request is turned down the browser says so here — which is the
+  // only place it says so at all. Catching it means the button the reader
+  // actually presses is the one that works: it asks for the real thing, and
+  // the moment the answer comes back no, the film is blown up inside the page
+  // instead. Nothing to know, nothing to press twice.
+  ["fullscreenerror", "webkitfullscreenerror"].forEach((e) => {
+    document.addEventListener(e, (ev) => {
+      const v = ev.target && ev.target.tagName === "VIDEO"
+        ? ev.target
+        : document.querySelector(".camp-scroll .step.now video");
+      if (!v) return;
+      v.classList.add("blown");
+      document.body.classList.add("blown-out");
+    });
+  });
+
+  // Escape gets you back out of the in-page one, the way it does the real one.
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    const blown = document.querySelector("video.blown");
+    if (blown) shrink(blown);
+  });
+
+  // Clicking a piece does not cut to its campaign — the picture itself carries
+  // you there. A copy of it is laid over the page at the exact place it was
+  // clicked and then moved to the place the campaign keeps for it, while the
+  // rest of the campaign comes up around it. The real one waits, hidden, and
+  // takes over the moment the copy lands, so there is never two of them.
+  // Lifting and landing are two separate acts, because on the way out of a
+  // campaign the picture has to be lifted off the page BEFORE the page is
+  // taken down. Built as one step, there was a moment with the campaign gone
+  // and nothing of Work up yet — a white blink with nothing on it at all.
+  // Lifted first, the picture is on screen without interruption throughout.
+  // Any copy still lying over the page from a transition that has not finished.
+  // Clicking through quickly used to leave the previous set behind, and the new
+  // set was laid on top of it — six pictures where there should be one.
+  const sweepCopies = () => {
+    document.querySelectorAll("img[data-fly]").forEach((n) => n.remove());
+  };
+
+  const liftThumb = (from, src) => {
+    const fly = document.createElement("img");
+    fly.dataset.fly = "1";
+    fly.src = src;
+    fly.alt = "";
+    fly.style.cssText =
+      "position:fixed;margin:0;object-fit:cover;border-radius:10px;z-index:60;" +
+      "pointer-events:none;" +
+      "left:" + from.left + "px;top:" + from.top + "px;" +
+      "width:" + from.width + "px;height:" + from.height + "px;";
+    document.body.appendChild(fly);
+    return fly;
+  };
+
+  // Ride whatever is scrolled back up to its top, quickly and under its own
+  // easing. Snapping is switched off for the ride: left on, it fights every
+  // frame of it and the column arrives in jerks.
+  const rideToTop = (sc, ms) => new Promise((done) => {
+    if (!sc || sc.scrollTop <= 1) return done();
+    sc.style.scrollSnapType = "none";
+    const start = sc.scrollTop;
+    const t0 = performance.now();
+    const step = () => {
+      const p = Math.min(1, (performance.now() - t0) / ms);
+      sc.scrollTop = Math.round(start * (1 - (1 - Math.pow(1 - p, 3))));
+      if (p < 1) requestAnimationFrame(step); else done();
+    };
+    requestAnimationFrame(step);
+    setTimeout(done, ms + 120);         // never hang on a frame that never comes
+  });
+
+  const landThumb = (fly, target) => {
+    target.style.visibility = "hidden";
+
+    let done = false;
+    const land = () => {
+      if (done) return;
+      done = true;
+      target.style.visibility = "";
+      fly.remove();
+    };
+    fly.addEventListener("transitionend", land, { once: true });
+
+    const launch = () => {
+      if (done) return;
+      const to = target.getBoundingClientRect();
+      if (!to.width || !to.height) { land(); return; }   // nowhere to fly to
+      // Make the browser take the starting values before the ending ones are
+      // set. Waiting on a frame instead is what made this jump: two frames
+      // asked for in a row can be served in the same one, the two sets of
+      // values then arrive together, and with nothing to move between the
+      // picture simply appears at the far end.
+      void fly.offsetWidth;
+      const ease = "cubic-bezier(.4,0,.2,1)";
+      fly.style.transition = ["left", "top", "width", "height"]
+        .map((p) => p + " " + FLIGHT + "ms " + ease).join(",");
+      fly.style.left = to.left + "px";
+      fly.style.top = to.top + "px";
+      fly.style.width = to.width + "px";
+      fly.style.height = to.height + "px";
+      // A transition that never fires must not leave the page with a copy
+      // stuck over it and the real picture hidden underneath.
+      setTimeout(land, FLIGHT + 400);
+    };
+
+    // The place it is flying to is sized by the picture that goes in it, so
+    // until that picture is there the place has no size worth measuring. Asked
+    // too early, the flight ends at a point that does not exist yet and the
+    // picture jumps the moment it loads.
+    if (target.complete && target.naturalWidth) launch();
+    else {
+      target.addEventListener("load", launch, { once: true });
+      setTimeout(launch, 400);          // never wait on a picture that fails
+    }
+  };
+
+  let openCampaign = null;              // the piece being looked at, for the way back
+
+  // `fly` is the piece's picture, already lifted off the grid before the grid
+  // was taken down — the same copy the way back uses, in the other direction.
+  const showCampaign = (w, fly) => {
+    view = "campaign";
+    openCampaign = w;
+    sync();
+
+    const camp = document.createElement("div");
+    // Always the two columns. The name sitting fixed beside the pieces is the
+    // shape of a campaign now, whether it has one piece or four — left to
+    // depend on having executions, the two without any opened full width, with
+    // the name stacked above instead of beside.
+    camp.className = "camp split";
+
+    // Every row carries its own label and its own piece, side by side, so the
+    // two are centred against each other without any arithmetic. Nothing here
+    // is written or erased as you move: the rows simply brighten and dim.
+    // The fixed column: the name, and under it the one line that changes.
+    const head = document.createElement("div");
+    head.className = "camp-head";
+    const h = document.createElement("h1");
+    h.textContent = w.name;
+    const lineWrap = document.createElement("div");
+    lineWrap.className = "camp-line";
+    const shortEl = document.createElement("p");
+    shortEl.className = "short";
+    shortEl.textContent = w.idea || "";
+    lineWrap.appendChild(shortEl);
+    head.append(h, lineWrap);
+    head.classList.add("lit");
+
+    const scroller = document.createElement("div");
+    scroller.className = "camp-scroll";
+
+    // The opening row is the name with the idea in one line under it, and the
+    // piece's own thumbnail beside them — the same picture that was just
+    // clicked, landing in the space the idea used to fill.
+    const rows = [{ label: w.name, short: w.idea, img: w.img, opener: true }]
+                   .concat(w.execs || []);
+
+    rows.forEach((r, i) => {
+      const step = document.createElement("section");
+      step.className = "step";
+      step.dataset.i = i;
+
+      // One line, and only one, for whatever row is in view: the idea on the
+      // opening row, and on the rest the sentence that says what the piece is.
+      // The bare label — Prints, Film, Videocase — is gone: the word it named
+      // is inside the sentence anyway, and two lines saying the same thing one
+      // above the other was one too many.
+      // An empty note is a decision, not a missing one: a row whose name says
+      // the whole thing gets no line under it, rather than the name repeated.
+      step.dataset.line = r.opener
+        ? (r.short || "")
+        : (r.note !== undefined ? r.note : (r.label || ""));
+
+      // And the name over it. The opening row carries the campaign's; every
+      // row after it carries the medium's, so scrolling down takes the
+      // campaign name away letter by letter and puts Prints, or Film, or
+      // Videocase in its place.
+      step.dataset.head = r.label || "";
+
+      const cell = document.createElement("div");
+      cell.className = "step-media";
+      if (r.video) {
+        const v = document.createElement("video");
+        v.src = r.video;
+        if (r.poster) v.poster = r.poster;
+        v.controls = true;
+        v.preload = "metadata";
+        v.playsInline = true;
+        // The control's own button is left alone; this is a second way in, for
+        // the case where that button does nothing.
+        v.addEventListener("dblclick", (e) => { e.preventDefault(); blowUp(v); });
+        cell.appendChild(v);
+      } else if (r.tracks) {
+        // The one row that plays rather than shows. Nothing is preloaded: four
+        // files would otherwise start fetching the moment the campaign opens,
+        // for a row most visitors scroll straight past.
+        cell.classList.add("beats-cell");
+        const list = document.createElement("div");
+        list.className = "beats";
+        r.tracks.forEach((t) => {
+          const row = document.createElement("div");
+          row.className = "beat";
+          if (r.cover) {
+            const c = document.createElement("img");
+            c.src = r.cover; c.alt = "";
+            row.appendChild(c);
+          }
+          const meta = document.createElement("div");
+          meta.className = "beat-meta";
+          const h = document.createElement("p");
+          h.className = "beat-title";
+          h.textContent = t.title;
+          const who = document.createElement("p");
+          who.className = "beat-artist";
+          who.textContent = "JPEGMAFIA";
+          const a = document.createElement("audio");
+          a.src = t.src; a.controls = true; a.preload = "none";
+          meta.append(h, who, a);
+          row.appendChild(meta);
+          list.appendChild(row);
+        });
+        cell.appendChild(list);
+      } else if (r.phones) {
+        // Two handsets with the code between them, the way the ad itself was
+        // laid out. The phones hold a still until the row is reached; the code
+        // is a link, and the only thing in the row you can press.
+        cell.classList.add("phones-cell");
+        const wrap = document.createElement("div");
+        wrap.className = "phones";
+        r.phones.forEach((g, i) => {
+          const im = document.createElement("img");
+          im.className = "phone";
+          im.alt = "";
+          im.src = (r.stills && r.stills[i]) || g;
+          if (r.stills && r.stills[i]) { im.dataset.gif = g; im.dataset.still = r.stills[i]; }
+          wrap.appendChild(im);
+          if (i === 0 && r.qr) {
+            const a = document.createElement("a");
+            a.href = r.href; a.target = "_blank"; a.rel = "noopener";
+            a.className = "qr-link";
+            const q = document.createElement("img");
+            q.src = r.qr; q.alt = "Scan to play";
+            a.appendChild(q);
+            wrap.appendChild(a);
+          }
+        });
+        cell.appendChild(wrap);
+      } else if (r.link) {
+        // On the middle of the column, where every piece above it is centred.
+        // Left to find its own width the line sat against the left edge, which
+        // is the one place nothing else in the campaign starts.
+        cell.classList.add("center");
+        const a = document.createElement("a");
+        a.href = r.link;
+        a.target = "_blank";
+        a.rel = "noopener";
+        a.className = "media-text-link";
+        a.textContent = r.linkText || "try it yourself";
+        cell.appendChild(a);
+      } else if (r.img) {
+        const im = document.createElement("img");
+        im.src = r.img;
+        im.alt = r.label;
+        if (r.upright) { im.className = "upright"; cell.classList.add("center"); }
+        if (r.big) im.classList.add("big");
+        else if (r.strip) im.className = "strip";
+        else if (r.opener) im.className = "opener";
+        // A gif starts the moment it loads, so the row holds a still frame and
+        // only swaps in the moving one once you have scrolled to it.
+        if (r.gif) { im.dataset.gif = r.gif; im.dataset.still = r.img; }
+        // One piece on the site is a way out of it rather than a thing to look
+        // at: the code the ad was scanned from, which still opens the game.
+        if (r.href) {
+          const a = document.createElement("a");
+          a.href = r.href; a.target = "_blank"; a.rel = "noopener";
+          a.className = "media-link";
+          a.appendChild(im);
+          cell.appendChild(a);
+        } else {
+          cell.appendChild(im);
+        }
+      }
+      step.appendChild(cell);
+      scroller.appendChild(step);
+    });
+
+    camp.append(head, scroller);
+    stage.replaceChildren(camp);
+    fitCampaign();
+
+    // The scroll is put back to the top BEFORE anything measures the target.
+    // Measured first, the flight was aimed at wherever mandatory snap had just
+    // dropped the column — the picture set off across the page to a place that
+    // stopped existing the moment the scroll was reset, and then had to appear
+    // where it really belonged. Everything below now measures a settled page.
+    scroller.scrollTop = 0;
+
+    if (fly) {
+      const opener = scroller.querySelector("img.opener");
+      if (opener) landThumb(fly, opener);
+      else fly.remove();
+      // The idea is written while the picture travels, and the two finish
+      // together: the last character has to have finished darkening by the
+      // time the picture lands, so the gap between characters is whatever is
+      // left of the flight once that last darkening is taken out of it.
+      if (shortEl && shortEl.textContent) {
+        const text = shortEl.textContent;
+        const per = Math.max(4, Math.round((FLIGHT - INK) / Math.max(1, text.length - 1)));
+        typeInto(shortEl, text, per);
+      }
+    }
+
+    // A campaign always opens on its first piece. Mandatory snap decides where
+    // to settle the moment the rows get their heights, and it does not reliably
+    // choose the top — left alone it opened a row down, with the fixed column
+    // already naming the second piece.
+    // Rows are measured from the pieces in them, so every piece that arrives
+    // late has to be measured again when it does.
+    scroller.querySelectorAll("img, video").forEach((m) => {
+      const again = () => {
+        if (view !== "campaign") return;
+        fitCampaign();
+        markCurrent(scroller, false);
+      };
+      if (m.tagName === "VIDEO") m.addEventListener("loadedmetadata", again, { once: true });
+      else if (!m.complete) m.addEventListener("load", again, { once: true });
+    });
+
+    markCurrent(scroller, false);   // the opening line is written by the flight, not drawn
+
+    // Nothing is written here. The whole thing comes up on opacity, with the
+    // name and its text already sitting beside each other.
+    void scroller.offsetWidth;            // let opacity:0 be painted first
+    scroller.classList.add("lit");
+
+    // Whichever row is in the middle is the one at full strength; the rest sit
+    // back so you can see there is more below. Read straight off the scroll,
+    // with no frame scheduled in between: the browser already sends at most
+    // one of these per frame, four rows cost nothing to measure, and anything
+    // deferred to a frame stops arriving in a tab that has gone to the back.
+    scroller.addEventListener("scroll", () => markCurrent(scroller));
+
+    // Proximity snap gathers you onto a row only if the browser decides you
+    // came to rest near enough to one, and it will happily leave a piece
+    // sitting half off the screen. So the column corrects itself: once the
+    // scrolling has actually stopped, whichever row is nearest is brought to
+    // the middle. It waits for the stop rather than fighting the hand — the
+    // writing between rows is drawn from those in-between positions, and
+    // mandatory snap, which refuses to hold them at all, would take it away.
+    // Measured off the boxes the browser has actually laid out, and moved with
+    // the browser's own centring. Worked out by hand instead, the arithmetic
+    // landed eighteen pixels from where snap puts a row, and the two spent the
+    // rest of the scroll pulling against each other.
+    let restTimer, correcting = false;
+    const centreNearest = () => {
+      const rows = [...scroller.querySelectorAll(".step")];
+      if (!rows.length) return;
+      const port = scroller.getBoundingClientRect();
+      const mid = port.top + scroller.clientHeight / 2;
+      let want = null, best = Infinity;
+      rows.forEach((s) => {
+        const r = s.getBoundingClientRect();
+        const d = Math.abs(r.top + r.height / 2 - mid);
+        if (d < best) { best = d; want = s; }
+      });
+      // Already there, near enough that moving would read as a twitch.
+      if (!want || best < 4) return;
+      correcting = true;
+      want.scrollIntoView({ behavior: "smooth", block: "center" });
+      setTimeout(() => { correcting = false; }, 700);
+    };
+    scroller.addEventListener("scroll", () => {
+      if (correcting) return;               // its own smooth scroll is not a new one
+      clearTimeout(restTimer);
+      restTimer = setTimeout(centreNearest, 150);
+    }, { passive: true });
+
+    // Safari hands a video back from fullscreen without a document-level
+    // event, so the video itself is asked as well.
+    scroller.querySelectorAll("video").forEach((v) => {
+      v.addEventListener("webkitendfullscreen", () => setTimeout(settleCampaign, 60));
+    });
+  };
+
+  // Six pieces, one to a row, and none of it may run past the foot of the
+  // screen. The width is settled by the layout — the pictures take the right half
+  // of the stage, which ends where the rule ends — so all that is left to work
+  // out is how tall a row can be for six of them to divide the screen exactly.
+  // That is what makes them as long as they are.
+  const fitGrid = () => {
+    const grid = stage.querySelector(".grid");
+    if (!grid) return;
+    const cs = getComputedStyle(main);
+    // Taken from the stylesheet rather than repeated here, so the optical
+    // correction lives in one place and the arithmetic cannot drift from it.
+    const gcs = getComputedStyle(grid);
+    const gapCol = parseFloat(gcs.columnGap) || 0;
+    const gapRow = parseFloat(gcs.rowGap) || 0;
+    const room = main.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+
+    // Two across, three down, filling the half the pictures have — the whole
+    // of it, from the top of the page to where the writing at the foot begins.
+    // Both measurements come from the page and neither from the pictures: the
+    // width is half the half, the height is a third of the room. What the
+    // pictures are cut to has no say, so they are cropped to fit.
+    const cellH = Math.max(40, Math.floor((room - 2 * gapRow) / 3));
+    grid.style.setProperty("--shot-h", cellH + "px");
+
+    // Both measurements have to land on whole pixels or the gaps stop matching
+    // each other. The rows already did — they come from a floor. The columns
+    // did not: `1fr 1fr` across a fractional width gives two 431.333px tracks,
+    // and an edge at a third of a pixel is rounded by the renderer, so the gap
+    // down the middle draws at 11 or 13 while the gaps across draw at 12, and
+    // one column can come out a pixel wider than the other. So the columns are
+    // measured out here instead, in whole pixels, and the grid is then pulled
+    // in to exactly what they need — it keeps its right edge on the rule, and
+    // gives up at most a pixel at the left, where nothing lines up against it.
+    grid.style.width = "";
+    const cellW = Math.max(40, Math.floor((grid.clientWidth - gapCol) / 2));
+    grid.style.gridTemplateColumns = cellW + "px " + cellW + "px";
+    grid.style.width = (cellW * 2 + gapCol) + "px";
+
+    // Centred against what the eye actually sees, not against the box. The
+    // pictures end where main ends, but the page does not: the foot carries
+    // its own lead before the first mark, so the air under the last row reads
+    // longer than the air over the first. Measured, that was 18 above and 49
+    // below. The band the pictures really sit in runs from the top of the page
+    // to the first thing printed at the foot, and they are centred in that.
+    // The first thing actually printed at the foot, not the first node: the
+    // line over the circle lives there too and is empty on this view, so
+    // asking for the first child measured a box with nothing in it.
+    const foot = document.querySelector("footer");
+    const firstAtFoot = foot && (foot.querySelector(".marks") || foot.firstElementChild);
+    if (firstAtFoot) {
+      grid.style.marginTop = "0px";
+      const padTop = parseFloat(cs.paddingTop) || 0;
+      const lead = Math.max(0, firstAtFoot.getBoundingClientRect().top - main.getBoundingClientRect().bottom);
+      const band = main.clientHeight + lead;
+      const tall = grid.getBoundingClientRect().height;
+      // Never past the foot of its own box — the shift only ever eats the
+      // padding that is already there.
+      const room2 = Math.max(0, main.clientHeight - padTop - tall);
+      const shift = Math.max(0, Math.min(room2, Math.round((band - tall) / 2 - padTop)));
+      grid.style.marginTop = shift + "px";
+    }
+  };
+
+  // `back` is the campaign being left, if one is: { w, from } — the piece and
+  // where its picture is sitting at the moment WORK is pressed. Everything the
+  // way in does, the way out does in reverse.
+  const showWork = (back) => {
+    view = "work";
+    sync();
+    // The stage holds two things: the pictures down the right half, and the one
+    // line slot in the half they leave.
+    const wrap = document.createElement("div");
+    wrap.className = "work";
+    const hoverLine = document.createElement("p");
+    hoverLine.className = "hover-line";
+    const ink = document.createElement("span");
+    ink.className = "ink";
+    hoverLine.appendChild(ink);
+    let lineTurn = 0;                   // so a fast sweep across the six cannot
+                                        // let an earlier line land after a later one
+
+    // The left half is never empty. With nothing pointed at, it says what all
+    // six of them have in common, and that word gets the same treatment as the
+    // lines themselves.
+    const setLine = (text) => {
+      if (ink.textContent === text) return;
+      const mine = ++lineTurn;
+      hoverLine.classList.remove("lit");        // the one leaving drops out
+      setTimeout(() => {
+        if (mine !== lineTurn || view !== "work") return;
+        ink.textContent = text;
+        hoverLine.classList.add("lit");         // and the one arriving comes up
+      }, 150);
+    };
+
+    const grid = document.createElement("div");
+    grid.className = "grid";
+    WORK.forEach((w, i) => {
+      const fig = document.createElement("figure");
+      fig.className = "tile";
+      fig.dataset.slug = w.name;          // so a campaign can find its way home
+
+      // The picture is wrapped so the pop has something to scale that clips
+      // its own corners; scaling the picture inside a fixed box would read as
+      // a zoom into the photograph instead.
+      const shot = document.createElement("div");
+      shot.className = "shot";
+      const img = document.createElement("img");
+      img.src = w.img;
+      img.alt = w.name;                 // the name lives here, not under the picture
+      shot.appendChild(img);
+
+      fig.appendChild(shot);
+      // They come up one after another rather than all at once — the six
+      // arrive as a run, not as a switch being thrown.
+      fig.style.transitionDelay = (i * 70) + "ms";
+
+      // One line at a time: pointing at a piece puts its line in the slot on
+      // the left, and looking away takes it out again.
+      fig.addEventListener("pointerenter", () => setLine(w.line));
+      fig.addEventListener("pointerleave", () => setLine(RESTING));
+      // Going in is the way back run backwards. Every picture is lifted off
+      // the page first — copies laid over the grid at the exact places they
+      // already occupy — and only then is the grid taken down. The five you
+      // did not choose fade away one after another, last one first, which is
+      // the same run the way back uses in the other order. The one you did
+      // choose stays solid and carries you into the campaign.
+      fig.addEventListener("click", () => {
+        sweepCopies();
+        // The five have to be gone by the time the sixth arrives. Left on the
+        // old timing they ran 730ms against the flight's 600, so the campaign
+        // stood there complete with thumbnails still dissolving over the top of
+        // it. Last delay plus the fade now lands just inside the flight.
+        const STEP = 40, FADE = 380;
+        const leaving = [...grid.querySelectorAll(".tile")].map((tile, k) => {
+          if (tile === fig) return null;
+          const im = tile.querySelector("img");
+          const copy = liftThumb(tile.querySelector(".shot").getBoundingClientRect(), im.src);
+          copy.style.transition = "opacity " + FADE + "ms ease-out";
+          copy.style.transitionDelay = ((WORK.length - 1 - k) * STEP) + "ms";
+          // Each one goes the moment it is done, rather than the whole set
+          // waiting on one timer long after the last of them faded.
+          copy.addEventListener("transitionend", () => copy.remove(), { once: true });
+          return copy;
+        }).filter(Boolean);
+
+        showCampaign(w, liftThumb(shot.getBoundingClientRect(), img.src));
+
+        // Set on the next frame so the copies are painted solid first; set in
+        // the same one, they would have nothing to fade from.
+        requestAnimationFrame(() => leaving.forEach((c) => { c.style.opacity = "0"; }));
+        setTimeout(() => leaving.forEach((c) => c.remove()), FADE + STEP * WORK.length + 200);
+      });
+      fig.style.cursor = "pointer";
+
+      grid.appendChild(fig);
+    });
+
+    wrap.append(hoverLine, grid);
+    stage.replaceChildren(wrap);
+    fitGrid();
+
+    // Wait until every picture is decoded before starting the fade. Fading an
+    // empty box and letting the images pop in as they finish decoding is what
+    // makes the six look as though they arrived all at once, with no fade at
+    // all — the transition had already run on nothing.
+    // Waiting on the pictures stops the fade running over empty boxes, but it
+    // must never be what you are waiting for — a slow decode should not hold
+    // the page. Whichever finishes first wins.
+    const shots = [...grid.querySelectorAll("img")];
+    const decoded = Promise.all(
+      shots.map((i) => (i.decode ? i.decode().catch(() => {}) : Promise.resolve()))
+    );
+    // Long enough that the pictures always win this race in practice. At 220ms
+    // they did not: the fade started on empty boxes, ran its smooth half, and
+    // then each picture snapped in as it finished decoding — fluid, and then a
+    // hard cut. The timeout is only here so a picture that never arrives
+    // cannot hold the page for good.
+    // Arriving from the home page the pictures have to be waited for. Coming
+    // back out of a campaign they do not: they were decoded when Work was last
+    // built and are in hand, and waiting on them again is dead time with the
+    // campaign already gone from the screen.
+    const raise = () => {
+        if (view !== "work") return;
+
+        // Coming back out of a campaign, the piece you were looking at is not
+        // one of the six arriving — it is the one already on its way home. Its
+        // own square is held empty while its picture travels back to it, and
+        // the other five come up around the gap, as though they had been
+        // waiting all along for it to drop back into place.
+        const home = back && grid.querySelector('.tile[data-slug="' + back.w.name + '"]');
+        if (home) {
+          home.style.transitionDelay = "0ms";
+          home.style.opacity = "1";       // its square is already there, empty
+        }
+
+        grid.classList.remove("up");
+        void grid.offsetWidth;            // let opacity:0 be painted first
+        grid.classList.add("up");
+
+        // The copy is already in the air — lifted before the campaign came
+        // down — so all that is left is to tell it where to land.
+        if (home && back.fly) landThumb(back.fly, home.querySelector("img"));
+        else if (back && back.fly) back.fly.remove();
+
+        // The line is written at the same moment the six come up, at the pace
+        // the home page writes at — not faded in after them. The container is
+        // lit first because the reveal here belongs to the characters, one at
+        // a time, and not to the block holding them.
+        hoverLine.classList.add("lit");
+        typeInto(ink, RESTING);
+    };
+
+    // Arriving from the home page the pictures have to be waited for, or the
+    // fade runs on empty boxes. Coming back out of a campaign they do not:
+    // they were decoded when Work was last built and are in hand. Waiting then
+    // is dead time with the campaign already gone and the copy hanging still
+    // in the air — so the way back raises them on the spot.
+    if (back) raise();
+    else Promise.race([decoded, new Promise((go) => setTimeout(go, 2000))]).then(raise);
+  };
+
+  // The circle always gives you another line, from wherever you are.
+  ring.addEventListener("click", () => { clearPrompt(); showText(); });
+
+  // And the square always gives you another page of the zine, from wherever
+  // you are. It does not take you anywhere: the page you were on is still
+  // underneath, and the next press swaps the sheet rather than the view.
+  document.getElementById("leaf").addEventListener("click", () => {
+    clearPrompt();
+    nextLeaf();
+  });
+
+  // The mark is the way home. It answers from every view, including from
+  // inside a campaign — which is the one place with a picture possibly still
+  // in the air, so anything mid-flight is swept and the open campaign is let
+  // go, or Work would later try to fly a piece back to a page that had moved
+  // on without it.
+  document.getElementById("btn-sig").addEventListener("click", () => {
+    sweepCopies();
+    openCampaign = null;
+    showText();
+  });
+  buttons.about.addEventListener("click", () => (view === "about" ? showText() : showAbout()));
+  buttons.work.addEventListener("click", () => {
+    if (view === "work") return showText();
+    // Leaving a campaign, the picture goes back the way it came — so where it
+    // is standing right now is measured before the page is torn down.
+    if (view === "campaign" && openCampaign) {
+      const w = openCampaign;
+      openCampaign = null;
+      const sc = stage.querySelector(".camp-scroll");
+      // Wherever you were in the campaign, it rides back up to its opening
+      // piece first — that piece is the one that has a place to go back to —
+      // and only then is it lifted off and the page changed under it.
+      sweepCopies();
+      rideToTop(sc, 300).then(() => {
+        // Put it exactly at the top before measuring. The ride is for the eye;
+        // this is for the arithmetic. Left to the ride alone, a frame it never
+        // got served meant the picture was lifted from wherever the column had
+        // reached — once from 680px above the screen, so the copy set off from
+        // somewhere nobody could see.
+        if (sc) sc.scrollTop = 0;
+        const opener = stage.querySelector("img.opener");
+        showWork(opener
+          ? { w, fly: liftThumb(opener.getBoundingClientRect(), opener.src) }
+          : undefined);
+      });
+      return;
+    }
+    showWork();
+  });
+
+  // Going fullscreen fires a window resize. Refitting on that one would size
+  // the rows to the fullscreen viewport and then work out which row is in the
+  // middle of a column nobody is looking at — pausing the very film that is
+  // playing. Everything is left exactly as it was until the film is handed
+  // back, and `settleCampaign` refits then.
+  window.addEventListener("resize", () => {
+    if (document.fullscreenElement) return;
+    fitGrid(); fitCampaign(); fitBio(); markCurrent();
+  });
+
+  // Leaving fullscreen, measured once the layout has actually settled and once
+  // more shortly after, rather than inside the event itself — at that instant
+  // the column is still the size it was on the big screen.
+  ["fullscreenchange", "webkitfullscreenchange"].forEach((e) => {
+    document.addEventListener(e, () => {
+      requestAnimationFrame(() => requestAnimationFrame(settleCampaign));
+      setTimeout(settleCampaign, 300);
+    });
+  });
+
+  showText();                           // a line of my own, chosen at random
+  raiseFurniture(LINES[last].length * PER);  // everything else, once it lands
+})();
+</script>
+</body>
+</html>
