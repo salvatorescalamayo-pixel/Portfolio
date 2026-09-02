@@ -731,6 +731,46 @@
   @media (prefers-reduced-motion:reduce){
     .ch{transition:none}
   }
+
+  /* ── On a narrow screen ────────────────────────────────────────────────────
+     Nothing here changes what the page is. The two-column reading is a luxury
+     of width: given a phone, the same material is laid out one thing under
+     another, in the same order, on the same margins, in the same face. What it
+     protects is the thing the whole site is for — the work being big enough to
+     look at, and the writing big enough to read. */
+  @media (max-width:48rem){
+    /* The pieces come first. On the desktop the grid takes two thirds and
+       leaves a third to the writing beside it; there is no third to spare
+       here, and the thumbnails were coming out 228px wide on a 375px screen. */
+    .grid{width:100%;margin:0}
+
+    /* A campaign stops being two columns and becomes two rows: the name and
+       its line above, the work full width below. Kept as a grid so the scroll
+       column still gets a bounded height to snap inside — minmax(0,1fr), or a
+       tall row would push the column past the foot of the page. */
+    .camp.split{
+      grid-template-columns:1fr;
+      grid-template-rows:auto minmax(0,1fr);
+      gap:1.25rem;
+    }
+    /* Its name is free to break. Held on one line it is the one thing on the
+       page that could push a phone sideways. */
+    .camp h1{white-space:normal}
+    .camp{gap:2rem}
+
+    /* The head is read once, at the top, so it does not need the height a
+       column gave it. */
+    .camp-head{align-self:start}
+
+    /* The bio is written to sit on one screen with nothing to scroll. When a
+       phone is too short to hold it at a legible size, this is what gives. */
+    .prose.bio.scrolls{overflow-y:auto;-webkit-overflow-scrolling:touch}
+  }
+
+  /* Under a very narrow phone the margins themselves are the luxury. */
+  @media (max-width:26rem){
+    .grid{column-gap:8px;row-gap:8px}
+  }
 </style>
 </head>
 <body>
@@ -1380,16 +1420,32 @@
     });
     probe.remove();
 
-    let size = widest > colW ? Math.floor(base * colW / widest) : base;
+    // Keeping every verse on one row is a rule that only holds while there is
+    // width to hold it with. On a phone it drove the size to 7px — the whole
+    // piece on screen and none of it readable. So the floor applies here too,
+    // and it is a higher floor on a small screen: past that point the line is
+    // allowed to wrap, which is the lesser of the two losses.
+    const floor = window.matchMedia("(max-width:48rem)").matches ? 15 : FLOOR;
+    let size = widest > colW ? Math.max(floor, Math.floor(base * colW / widest)) : base;
     node.style.fontSize = size + "px";
 
     // Then down a pixel at a time until the whole piece is inside the room it
     // has. Measured rather than calculated: the leading rounds to whole
     // pixels, so the height is not a straight multiple of the size.
-    while (size > FLOOR && node.scrollHeight > room) {
+    while (size > floor && node.scrollHeight > room) {
       size--;
       node.style.fontSize = size + "px";
     }
+
+    // If it still does not fit at a size worth reading, the page gives up the
+    // no-scroll rule rather than the reading. Only ever true on a small
+    // screen; on any real width the loop above has already won. The height has
+    // to be pinned to the room as well as the overflow set — left to its
+    // content the block simply grew past the foot of the page and scrolled
+    // nothing.
+    const over = node.scrollHeight > room + 1;
+    node.classList.toggle("scrolls", over);
+    node.style.maxHeight = over ? room + "px" : "";
   };
 
   // The name is written first and alone. Only when the last letter has landed
