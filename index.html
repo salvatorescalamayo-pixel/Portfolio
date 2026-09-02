@@ -111,13 +111,22 @@
   /* The sheet fills the layer and centres what it holds, rather than shrinking
      to fit it: a box with no height of its own gives the sheet's own max-height
      nothing to be a share of, and the scan collapses to nothing. */
+  /* The sheet arrives the way the tiles do on the page this borrows from: out
+     of focus and not there at all, coming to both at once over half a second.
+     Read off that page's own rule — filter and opacity, .5s, ease, blur 20px
+     down to none — rather than approximated by eye. */
   .zine .leaf{
     position:absolute;inset:0;
     display:flex;align-items:center;justify-content:center;
-    opacity:0;transition:opacity .42s ease-out;
+    opacity:0;filter:blur(20px);
+    transition:filter .5s ease,opacity .5s ease;
   }
-  .zine .leaf.up{opacity:1}
-  .zine .leaf.down{opacity:0;transition:opacity .22s ease-in}
+  .zine .leaf.up{opacity:1;filter:blur(0px)}
+  /* Leaving is quicker than arriving, and back out through the same blur. */
+  .zine .leaf.down{
+    opacity:0;filter:blur(20px);
+    transition:filter .26s ease-in,opacity .26s ease-in;
+  }
   /* A fixed box the picture is fitted inside, so pictures of different shapes
      all land on the same two lines and none of them resizes the block. */
   /* The picture keeps its own shape and sits on the middle of the block; the
@@ -342,6 +351,21 @@
     cursor:pointer;transition:opacity .2s;
   }
   @media (min-width:64rem){ .sig{font-size:1.875rem} }
+  /* Reads on from the name rather than under it — the same face at the same
+     size, sitting on the same baseline, only lower case and a shade back so
+     the wordmark still leads. */
+  .role{
+    font-size:1.5rem;color:var(--chrome);opacity:.55;
+    letter-spacing:.01em;margin-left:.45em;
+    white-space:nowrap;
+    /* The bar spaces its children apart, and a third one would be left
+       hovering in the middle of it. This keeps the line against the name and
+       leaves the two words on the right where they were. */
+    margin-right:auto;
+  }
+  @media (min-width:64rem){ .role{font-size:1.875rem} }
+  /* On a narrow bar the nav has the right of way. */
+  @media (max-width:34rem){ .role{display:none} }
   .sig:hover{opacity:.5}
   .sig:focus-visible{outline:none;text-decoration:underline;text-underline-offset:.24em}
 
@@ -709,6 +733,7 @@
   <div class="rule"></div>
   <div class="bar">
     <button class="sig" id="btn-sig">SALVA.</button>
+    <span class="role">is a copywriter</span>
     <nav class="nav">
       <button id="btn-work" aria-pressed="false">Work</button>
       <button id="btn-about" aria-pressed="false">About</button>
@@ -772,7 +797,7 @@
     "I still can't explain to my dad what I do for a living.\n" +
     "My best joke was telling him I wanted to live off my creativity.\n" +
     "He quoted Brad Pitt in Once Upon a Time in Hollywood.\n" +
-    "\"Fucking hippies, motherfuckers.\"\n\n" +
+    "\"Fucking hippies.\"\n\n" +
 
     "I still can't tell the difference between wit and stupidity.\n" +
     "But it pays, so call me whatever you want.";
@@ -976,7 +1001,7 @@
   // its own moment, each one landing a hair off the line the one before it
   // left. The whole point is that it is not even — even would read as an
   // animation, and this has to read as paper being moved by somebody.
-  const OUT = 220, IN = 420;            // match the transitions on .zine img
+  const OUT = 260, IN = 500;            // match the transitions on .zine .leaf
   let zineGen = 0;                      // only the newest press gets to land
 
   // A page comes up on opacity and the one it replaces goes with it. Both lie
