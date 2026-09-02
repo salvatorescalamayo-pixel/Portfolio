@@ -305,6 +305,20 @@
   .ring.hollow,
   .ring-button:hover .ring,
   .ring-button:focus-visible .ring{background:transparent;border-color:currentColor}
+  /* The arrow is drawn out of its own borders — the two transparent ones are
+     what make its point. Hollowing it the way the circle and the square hollow
+     paints those in, and it stops being an arrow and becomes a block. It keeps
+     its shape and answers the pointer by stepping back instead. */
+  .ring-button:hover .ring.arrow,
+  .ring-button:focus-visible .ring.arrow{
+    background:none;
+    border-top-color:transparent;
+    border-bottom-color:transparent;
+    border-right-color:currentColor;
+  }
+  /* Written against the lit state, or the rule that brings it up would win. */
+  footer.in-camp #back:hover,
+  footer.in-camp #back:focus-visible{opacity:.5;transition:opacity .2s}
   .ring-button:active .ring{transform:scale(.88)}
   .ring-button:focus-visible{outline:none}
   /* The two marks sit side by side under the writing. The square is the same
@@ -312,6 +326,32 @@
      with the corners left on. It hands you a page of the zine. */
   .marks{display:flex;align-items:center;gap:.75rem}
   .ring.box{border-radius:0}
+
+  /* The way back out of a piece of work. Same colour and the same height as
+     the circle and the square — it belongs to that row, not to the writing —
+     and lying on its side it points at where it takes you. Drawn in borders
+     rather than a glyph so it takes its colour from the row and scales with
+     the same em the other two do. */
+  .ring.arrow{
+    width:0;height:0;
+    background:none;border-radius:0;border:0;
+    border-top:.4375em solid transparent;
+    border-bottom:.4375em solid transparent;
+    border-right:.76em solid currentColor;
+  }
+  /* It exists only inside a project. On the home page, in Work, in the bio
+     there is nothing to come back from, and an arrow there would be a way out
+     of somewhere you are not. It sits at the far end of the row, over the
+     second of the two words at the foot. */
+  /* It arrives the way everything at the foot arrives — brought up on
+     opacity, not switched on. Kept in the row while it is invisible so the
+     row does not jump, and deaf to the pointer until it is really there. */
+  #back{
+    margin-left:auto;
+    opacity:0;pointer-events:none;
+    transition:opacity .5s ease-out;
+  }
+  footer.in-camp #back{opacity:1;pointer-events:auto}
 
   /* You arrive at a blank page with a sentence being written on it. Only once
      that has landed does the rest of the furniture turn up — the prompt, the
@@ -818,6 +858,7 @@
   <div class="marks">
     <button class="ring-button" id="ring" aria-label="Another"><span class="ring"></span></button>
     <button class="ring-button" id="leaf" aria-label="A photograph, and what it turned into"><span class="ring box"></span></button>
+    <button class="ring-button" id="back" aria-label="Back to the work"><span class="ring arrow"></span></button>
   </div>
   <div class="rule"></div>
   <div class="bar">
@@ -938,12 +979,10 @@
         // stand taller than the screen the scroll rests on, so each is given
         // the height a flat piece would have and centred in the column. Both
         // land whole inside the same stop the rest of the campaign uses.
-        { label: "OOH", img: "assets/ads-from-trash-ooh-1.webp",
-          note: "Taped to the walls the donation bins stand against." },
-        // The other four. The head and the line do not change, so the second
-        // screen reads as more of the same run rather than a new piece — which
-        // is what it is, and what lets eight shots have the room four had.
-        { label: "OOH", img: "assets/ads-from-trash-ooh-2.webp",
+        // All eight in one run, edge to edge. Split over two screens they read
+        // as two pieces of work with a gap between them; butted into a single
+        // block they read as what they are — one campaign, pasted up in a row.
+        { label: "OOH", img: "assets/ads-from-trash-ooh.webp",
           note: "Taped to the walls the donation bins stand against." }
       ] },
     { name: "Pick a Side",      img: "assets/pick-a-side.jpg",
@@ -1292,6 +1331,10 @@
     main.classList.toggle("reading", view === "about");
     main.classList.toggle("wide", view === "work" || view === "campaign");
     main.classList.toggle("full", view === "campaign");
+    // The arrow at the foot belongs to a campaign and to nothing else. The
+    // flag goes on the footer rather than on main, because the foot of the
+    // page is not inside it.
+    footer.classList.toggle("in-camp", view === "campaign");
     // The line over the circle belongs to the opening screen and to nowhere
     // else. Leave the home page — for work, for a campaign, for the bio — and
     // it goes, whether or not the circle has been pressed yet.
@@ -2376,6 +2419,19 @@
     clearPrompt();
     nextLeaf();
   });
+
+  // The arrow is the same door as the word. Rather than a second copy of the
+  // way out of a campaign — which is the one journey on the site that has to
+  // put a picture back where it came from — it presses Work, and everything
+  // that follows is the one implementation.
+  document.getElementById("back").addEventListener("click", () => {
+    clearPrompt();
+    buttons.work.click();
+  });
+
+  // The arrow ends where the rule ends. Both the row of marks and the rule
+  // run the full width of the foot, so the auto margin in the stylesheet puts
+  // its right edge on the end of the line with nothing measured here.
 
   // The mark is the way home. It answers from every view, including from
   // inside a campaign — which is the one place with a picture possibly still
