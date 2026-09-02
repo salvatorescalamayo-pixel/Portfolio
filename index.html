@@ -1020,7 +1020,14 @@
         // same sticker as the reversing camera finds it. The pair turns over on
         // the second line, so the print and the screen never stack in a column
         // of their own — the same rule the trash campaign is laid out on.
-        { label: "Prints", img: "assets/bis-prints.webp",
+        { label: "Prints", img: "assets/bis-prints.webp", only: "wide",
+          note: "Stuck up in hotel car parks, and in the car parks near them." },
+        // On a phone the same four run down the page instead, edge to edge and
+        // at the full width of the column — much bigger than a quarter of a
+        // block each. Taller than the screen by design: a piece the column
+        // cannot hold whole is not brought to rest at all, so this one is
+        // scrolled through rather than stopped at.
+        { label: "Prints", img: "assets/bis-prints-tall.webp", only: "narrow",
           note: "Stuck up in hotel car parks, and in the car parks near them." },
         { label: "Film", video: "assets/bis-2-film.mp4", poster: "assets/bis-2-film-poster.jpg",
           note: "Thirty seconds of it, run as a YouTube ad." },
@@ -1059,19 +1066,24 @@
         // either half shown on its own. Four at a time is what lets them be
         // big. The head and the line do not change between the two, so the
         // second reads as more of the same run rather than as a new piece.
-        // Two to a screen: the garment with its headline, and under it the
-        // close-up cut from the same piece. Four to a screen meant four
-        // headlines at a quarter of the room each, and none of them could be
-        // read. `upright` is what makes them big — it hands the picture the
-        // height of the column and lets its width follow, instead of the width
-        // of the column with the height left over.
-        { label: "OOH", img: "assets/aft-1.webp", upright: true,
+        // Wide: the block of four, as the campaign was laid out.
+        { label: "OOH", img: "assets/ads-from-trash-ooh-1.webp", only: "wide",
           note: "Taped to the walls the donation bins stand against." },
-        { label: "OOH", img: "assets/aft-2.webp", upright: true,
+        { label: "OOH", img: "assets/ads-from-trash-ooh-2.webp", only: "wide",
           note: "Taped to the walls the donation bins stand against." },
-        { label: "OOH", img: "assets/aft-3.webp", upright: true,
+        // Narrow: the same eight photographs, two to a screen — the garment
+        // with its headline and under it the close-up cut from the same piece.
+        // Four to a phone screen is four headlines at a quarter of the room
+        // each, and none of them can be read. `upright` is what makes them
+        // big: it hands the picture the height of the column and lets its
+        // width follow, rather than the width with the height left over.
+        { label: "OOH", img: "assets/aft-1.webp", upright: true, only: "narrow",
           note: "Taped to the walls the donation bins stand against." },
-        { label: "OOH", img: "assets/aft-4.webp", upright: true,
+        { label: "OOH", img: "assets/aft-2.webp", upright: true, only: "narrow",
+          note: "Taped to the walls the donation bins stand against." },
+        { label: "OOH", img: "assets/aft-3.webp", upright: true, only: "narrow",
+          note: "Taped to the walls the donation bins stand against." },
+        { label: "OOH", img: "assets/aft-4.webp", upright: true, only: "narrow",
           note: "Taped to the walls the donation bins stand against." }
       ] },
     { name: "Pick a Side",      img: "assets/pick-a-side.jpg",
@@ -1123,11 +1135,10 @@
             { title: "92596",      src: "assets/numpad-jam-beat3.mp3" },
             { title: "2628268286", src: "assets/numpad-jam-beat4.mp3" }
           ] },
-        // Two to a screen, for the same reason the OOH is: four pieces at a
-        // quarter of the column each are four pieces nobody can read.
-        { label: "Merch", img: "assets/merch-1.webp", upright: true,
-          note: "Four pieces. Every one of them numbered." },
-        { label: "Merch", img: "assets/merch-2.webp", upright: true,
+        // The block of four, on every screen. Unlike the OOH there is nothing
+        // to read on these — four garments photographed flat — so a phone
+        // showing all four at once loses nothing.
+        { label: "Merch", img: "assets/numpad-jam-merch.webp",
           note: "Four pieces. Every one of them numbered." },
         // The record itself, on the page it was made on. Last, because it is
         // the one piece that takes you off this site.
@@ -1599,7 +1610,14 @@
     const node = stage.querySelector(".prose.bio");
     if (!node) return;
     node.style.fontSize = "";           // back to the designed size to measure
-    const room = stage.clientHeight;
+    // The room is the page less the document offered under it. Fitted to the
+    // whole of it, the verse filled the screen and the C.V. — which sits below
+    // it, inside the same box — was pushed off the bottom of the page. That is
+    // why it kept going missing on a phone: it was not late, it was outside.
+    const cv = stage.querySelector(".cv-link");
+    const room = stage.clientHeight - (cv
+      ? cv.offsetHeight + (parseFloat(getComputedStyle(cv).marginTop) || 0)
+      : 0);
     const colW = node.clientWidth;
     if (!room || !colW) return;
     const base = parseFloat(getComputedStyle(node).fontSize);
@@ -1641,15 +1659,13 @@
       node.style.fontSize = size + "px";
     }
 
-    // If it still does not fit at a size worth reading, the page gives up the
-    // no-scroll rule rather than the reading. Only ever true on a small
-    // screen; on any real width the loop above has already won. The height has
-    // to be pinned to the room as well as the overflow set — left to its
-    // content the block simply grew past the foot of the page and scrolled
-    // nothing.
-    const over = node.scrollHeight > room + 1;
-    node.classList.toggle("scrolls", over);
-    node.style.maxHeight = over ? room + "px" : "";
+    // There is no scroll on the bio, on any screen. It gave one as a last
+    // resort when the piece would not fit at a legible size; with the room now
+    // measured honestly — the page less the document under it — the loop above
+    // always wins, and a small scrollbar appearing on a phone was the sign
+    // that it had not been.
+    node.classList.remove("scrolls");
+    node.style.maxHeight = "";
   };
 
   // The name is written first and alone. Only when the last letter has landed
@@ -1683,14 +1699,18 @@
     // measured, not after — measured first, the row would be built around the
     // height the film happened to have at that moment and then the film would
     // change underneath it.
+    // Declared before anything reads it: sizing a piece by it a dozen lines
+    // above where it was first set is a reference to a variable that does not
+    // exist yet, and the whole fitting throws.
+    const narrow = window.matchMedia("(max-width:48rem)").matches;
     const flatH = Math.round((sc.querySelector(".step-media")?.clientWidth || 0) * 9 / 16);
-    // An upright piece used to be given the height a flat one would have, so
-    // that its row was the same depth as every other and the rhythm of the
-    // scroll did not change at it. But a tall film in a wide column then used
-    // barely half the screen it had: the height was set by a shape it does not
-    // have. It takes the room instead — the same share of the column the
-    // square blocks take — and its width follows from its own proportion.
-    const uprightH = Math.round(H * 0.82);
+    // On a wide screen an upright piece is given the height a flat one would
+    // have, so its row is the same depth as every other and the rhythm of the
+    // scroll does not change at it. On a phone that shape wastes the screen —
+    // a tall film in a narrow column used barely a third of the height it had
+    // — so there it takes the room instead, and its width follows from its own
+    // proportion.
+    const uprightH = narrow ? Math.round(H * 0.82) : flatH;
     sc.querySelectorAll("img.upright").forEach((im) => {
       if (uprightH > 0) im.style.height = uprightH + "px";
     });
@@ -1702,7 +1722,6 @@
     // pixels each — less than the player inside them, which then hung out of
     // its own card and over the next one. There, the tracks are given the
     // height they need instead.
-    const narrow = window.matchMedia("(max-width:48rem)").matches;
     sc.querySelectorAll(".beats, .phones").forEach((b) => {
       // The phones go the same way on a phone: three things across a 343px
       // column left each handset 107px wide. The code below drops the reader
@@ -1711,6 +1730,22 @@
       if (narrow) { b.style.height = ""; return; }
       if (flatH) b.style.height = flatH + "px";
     });
+
+    // The handsets are given whatever is left of the column once the code
+    // below them has taken its share. Sized off the screen instead — a share
+    // of the viewport — they came out right on the one phone they were
+    // measured on and hung out of the column on a shorter one, and the block
+    // was cut. Here the sum is done against the column that has to hold it.
+    if (narrow) {
+      sc.querySelectorAll(".phones").forEach((b) => {
+        const qr = b.querySelector(".qr-link");
+        const gap = parseFloat(getComputedStyle(b).rowGap) || 12;
+        const left = H * 0.88 - (qr ? qr.getBoundingClientRect().height : 0) - gap * 2;
+        b.querySelectorAll(".phone").forEach((p) => {
+          p.style.maxHeight = Math.max(120, Math.round(left)) + "px";
+        });
+      });
+    }
     // The square blocks are the one piece that should take the screen rather
     // than the column's usual depth — four garments in one frame need the room.
     // Held to whichever is smaller, the stop the scroll rests in or the width
@@ -2104,8 +2139,15 @@
     // The opening row is the name with the idea in one line under it, and the
     // piece's own thumbnail beside them — the same picture that was just
     // clicked, landing in the space the idea used to fill.
+    // Some pieces are cut two ways. A wide screen takes the block of four as
+    // it was laid out — that is the campaign as it was made — and a phone,
+    // which would show the same block at a quarter of the size and none of it
+    // readable, takes the same photographs two to a screen instead. A row
+    // marked for one is skipped by the other; a row marked for neither is
+    // shown on both.
+    const want = window.matchMedia("(max-width:48rem)").matches ? "narrow" : "wide";
     const rows = [{ label: w.name, short: w.idea, img: w.img, opener: true }]
-                   .concat(w.execs || []);
+                   .concat((w.execs || []).filter((r) => !r.only || r.only === want));
 
     rows.forEach((r, i) => {
       const step = document.createElement("section");
