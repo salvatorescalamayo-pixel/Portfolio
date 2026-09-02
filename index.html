@@ -2506,16 +2506,11 @@
       if (i <= done) return;            // already landed; leave it alone
       c.style.animationDelay = ((i - done) * step) + "ms";
     });
-    // The document under the bio is offered when the writing lands, and it was
-    // still waiting on the clock the writing would have taken unhurried — so
-    // hurrying the words left it a full minute behind them, looking as though
-    // it never came. It follows the writing it belongs to instead.
-    if (bioCv) {
-      const cv = bioCv;
-      setTimeout(() => {
-        if (view === "about") cv.classList.add("on");
-      }, RUSH_MS + 200);
-    }
+    // The document under the bio waits on the clock the writing would have
+    // taken unhurried, which left it a full minute behind the words once they
+    // were hurried — it looked as though it never came. Pressing the line asks
+    // for the whole page at once, so it is simply there with everything else.
+    if (bioCv) bioCv.classList.add("on");
   });
 
   // The mark is the way home. It answers from every view, including from
