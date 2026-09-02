@@ -224,8 +224,12 @@
      one in the chain whose cap does resolve — main's height is settled by the
      flex column — so #stage is where the room runs out and where the scrolling
      belongs. No bar: the site does not show one anywhere. */
-  main.reading #stage{overflow-y:auto;scrollbar-width:none}
-  main.reading #stage::-webkit-scrollbar{display:none}
+  /* And it does not scroll after all. The verse is fitted to the room it has,
+     so there is never anything below the fold to reach — and leaving the box
+     scrollable meant a pixel of rounding was enough to put the C.V. just past
+     its bottom edge, present and unreachable without a drag. Nothing on this
+     page is arrived at by scrolling; it is all simply there. */
+  main.reading #stage{overflow-y:hidden}
 
   /* A character does not exist until it is written. It arrives pale and goes
      to ink over .15s, so at any moment only the last five or six are still
@@ -851,6 +855,13 @@
     .camp h1{white-space:normal}
     .camp{gap:2rem}
 
+    /* Every piece runs the measure the rule keeps at the foot. The cell is a
+       flex box that otherwise takes the width of whatever is in it, so a
+       picture with a height set came out at its own proportion and stopped
+       short of the line — twenty pixels on one campaign, sixty on another. */
+    .step-media{width:100%}
+    .step-media img.opener{width:100%}
+
     /* The head is read once, at the top, so it does not need the height a
        column gave it. */
     /* The line under the name is hung out of the flow on the desktop, where it
@@ -863,6 +874,12 @@
       align-self:start;
       position:sticky;top:0;z-index:2;
       background:var(--paper,#fff);
+      /* Room for a name and two lines under it, kept whether or not the second
+         line is there. The scroll below starts where this ends, so a campaign
+         whose line wraps once was starting its column fifty pixels lower than
+         one whose line did not — the work was the same distance down in both,
+         but it did not look it. */
+      min-height:8rem;
       /* Not pressed against the top edge — the name reads as the start of a
          page rather than as a bar stuck to the frame. */
       padding-top:1.1rem;
@@ -911,7 +928,12 @@
        where it does some good — not all of it, because the circle and the
        square still need clear air above them. The fitting below will take it
        back if a shorter screen ever needs it. */
-    .prose.bio p{margin:0 0 1.15em}
+    /* The air between the verses was opened up when there was room to spare.
+       On a short phone there is not: the piece plus the document under it has
+       to land inside the page with nothing to scroll to, and thirty pixels of
+       spacing is the difference between that and a C.V. cut off at the fold.
+       It is given back only as far as the fitting can afford. */
+    .prose.bio p{margin:0 0 .8em}
   }
 
   /* Under a very narrow phone the margins themselves are the luxury. */
@@ -1586,11 +1608,14 @@
     bioStarted = performance.now();
     ringWhileWriting([...ABOUT].length, ABOUT_PER);
     fitBio();
-    // It used to wait for the writing to land, which is twenty-one seconds,
-    // and then for a shortened two and a half — and it was still missing every
-    // time anybody looked for it. It is a document, not a reveal: it is on the
-    // page from the moment the page is.
-    cv.classList.add("on");
+    // Offered when the reading is done, never before it. The first time you
+    // open the bio that is the only way it can arrive — you have not been here
+    // before, so there is nothing to skip. From the second time on there is
+    // also the line at the foot: press it and the writing runs out at once and
+    // the document comes with it. Whichever of the two happens first.
+    setTimeout(() => {
+      if (view === "about") cv.classList.add("on");
+    }, [...ABOUT].length * ABOUT_PER + 200);
   };
 
   // There is to be no scroll on the bio, on any screen. Nineteen lines of
@@ -1660,7 +1685,7 @@
     // Fifteen was a floor the piece could not always reach: on a short phone
     // it stopped there and ran off the bottom of the screen instead, taking
     // the C.V. with it. Twelve still reads, and it fits.
-    const floor = window.matchMedia("(max-width:48rem)").matches ? 12 : FLOOR;
+    const floor = window.matchMedia("(max-width:48rem)").matches ? 11 : FLOOR;
     let size = widest > colW ? Math.max(floor, Math.floor(base * colW / widest)) : base;
     node.style.fontSize = size + "px";
 
@@ -1728,12 +1753,22 @@
     // proportion.
     const uprightH = narrow ? Math.round(H * 0.82) : flatH;
 
-    // The opening thumbnail is a title card, not a piece of the work, and on a
-    // phone every pixel of it is a pixel between the reader and the first
-    // execution. Held to a third of the column there.
+    // The opening thumbnail runs the full measure, always — from where the
+    // rule at the foot starts to where it ends. On a phone it is also cut to
+    // one fixed shape for every campaign: the thumbnails are all different
+    // proportions, so left alone each one put its first execution a different
+    // distance down the page, and no two campaigns scrolled alike.
+    //
+    // The width has to be set here as well as the height. The cell is a flex
+    // box that takes the size of what is in it, so a picture given only a
+    // height shrank to its own proportion and took the cell with it — the
+    // thumbnail came out eighty pixels short of the rule.
+    let openH = 0;
     if (narrow) {
-      const openH = Math.round(H * 0.34);
+      const cellW = sc.querySelector(".step-media")?.clientWidth || 0;
+      openH = Math.round(cellW * 0.42);
       sc.querySelectorAll("img.opener").forEach((im) => {
+        im.style.width = "100%";
         im.style.height = openH + "px";
         im.style.objectFit = "cover";
       });
@@ -1791,7 +1826,13 @@
       const h = m ? m.getBoundingClientRect().height : 0;
       // Before a picture has loaded it measures nothing; fall back to the
       // shape of the column so the rows are never all collapsed at once.
-      const guess = h || Math.round(s.clientWidth * 9 / 16);
+      // The opening row is cut to one fixed height on a phone, so it is taken
+      // from that number rather than measured. Measured, a thumbnail that had
+      // not been laid out yet fell back to a guess, the row came out fifty
+      // pixels taller, and that campaign's first execution sat further down
+      // than the others' — the one thing this shape was meant to make equal.
+      const fixed = (narrow && openH && s.querySelector("img.opener")) ? openH : 0;
+      const guess = fixed || h || Math.round(s.clientWidth * 9 / 16);
       return Math.round(guess) + GAP;
     });
     steps.forEach((s, i) => { s.style.height = heights[i] + "px"; });
@@ -1923,6 +1964,7 @@
     // row: the row carries its air too, which on a wide screen makes it taller
     // than the column while the picture inside it still fits perfectly.
     const room = sc.clientHeight;
+    const narrowNow = window.matchMedia("(max-width:48rem)").matches;
     steps.forEach((s) => {
       const m = s.querySelector(".beats, .phones, .media-text-link, img, video");
       const h = m ? m.getBoundingClientRect().height : 0;
@@ -1934,14 +1976,33 @@
       const free = h > room;
       s.style.scrollSnapAlign = free ? "start" : "";
       if (free) s.dataset.free = "1"; else delete s.dataset.free;
+      // On a phone the opening row keeps no stop of its own. Its own snap sat
+      // two hundred pixels from the first execution's, so a flick off the
+      // thumbnail was inside both and the column was pulled straight back to
+      // the title card — the work could not be reached at all. Nothing holds
+      // you on the cover; the first thing you can stop at is the work.
+      if (narrowNow && s === steps[0] && steps.length > 1) {
+        s.style.scrollSnapAlign = "none";
+      }
     });
 
     // Where the middle of the column falls among the rows, as a fraction.
     // Taken from the rows' own boxes rather than from scrollTop, so it stays
     // right whatever padding the fitting has put above and below them.
-    const middle = sc.getBoundingClientRect().top + sc.clientHeight / 2;
+    const scTop = sc.getBoundingClientRect().top;
+    const scBot = scTop + sc.clientHeight;
+    const middle = scTop + sc.clientHeight / 2;
     const mids = steps.map((s) => {
       const b = s.getBoundingClientRect();
+      // A row taller than the column is judged by the part of it that is on
+      // the screen, not by its own centre — which sits a thousand pixels below
+      // the page while the piece fills it. Measured the other way, the block
+      // could cover the whole screen and the name at the foot still read as
+      // the campaign's, because the opening row's centre was nearer.
+      if (b.height > sc.clientHeight) {
+        const top = Math.max(b.top, scTop), bot = Math.min(b.bottom, scBot);
+        if (bot > top) return (top + bot) / 2;
+      }
       return b.top + b.height / 2;
     });
     let f = 0;
@@ -2419,6 +2480,12 @@
       // A piece the column cannot hold whole is not brought to rest — see the
       // note where the flag is set.
       if (want.dataset.free) return;
+      // Nor is the opening row, on a phone. It has no snap of its own there,
+      // and this was undoing that on its own: a flick off the title card left
+      // the cover still nearest the middle, so the column was walked straight
+      // back to it and the work could never be reached.
+      if (window.matchMedia("(max-width:48rem)").matches &&
+          want === rows[0] && rows.length > 1) return;
       correcting = true;
       want.scrollIntoView({ behavior: "smooth", block: "center" });
       setTimeout(() => { correcting = false; }, 700);
