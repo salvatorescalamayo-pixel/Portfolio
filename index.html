@@ -888,7 +888,7 @@
     <button class="ring-button" id="leaf" aria-label="A photograph, and what it turned into"><span class="ring box"></span></button>
     <span class="marks-end">
       <button class="ring-button" id="back" aria-label="Back to the work"><span class="ring arrow"></span></button>
-      <span class="knew" id="knew">i already know you</span>
+      <span class="knew" id="knew">I already know you.</span>
     </span>
   </div>
   <div class="rule"></div>
@@ -1488,6 +1488,7 @@
   // time and every time after, and it is forgotten when the page is.
   let aboutOpened = 0;
   let bioNode = null, bioStarted = 0;   // what is being written, and since when
+  let bioCv = null;                     // and the document offered under it
 
   const showAbout = () => {
     view = "about";
@@ -1507,6 +1508,7 @@
     stage.replaceChildren(p, cv);
     typeBlocks(p, ABOUT.split("\n\n"), ABOUT_PER);
     bioNode = p;
+    bioCv = cv;
     bioStarted = performance.now();
     ringWhileWriting([...ABOUT].length, ABOUT_PER);
     fitBio();
@@ -2504,6 +2506,16 @@
       if (i <= done) return;            // already landed; leave it alone
       c.style.animationDelay = ((i - done) * step) + "ms";
     });
+    // The document under the bio is offered when the writing lands, and it was
+    // still waiting on the clock the writing would have taken unhurried — so
+    // hurrying the words left it a full minute behind them, looking as though
+    // it never came. It follows the writing it belongs to instead.
+    if (bioCv) {
+      const cv = bioCv;
+      setTimeout(() => {
+        if (view === "about") cv.classList.add("on");
+      }, RUSH_MS + 200);
+    }
   });
 
   // The mark is the way home. It answers from every view, including from
