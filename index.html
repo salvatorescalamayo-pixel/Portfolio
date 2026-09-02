@@ -1620,7 +1620,12 @@
     const floorY = marks
       ? marks.getBoundingClientRect().top - 12   // a breath over the marks
       : top + stage.clientHeight;
-    const room = Math.max(0, floorY - top) - (cv
+    // Whichever is smaller: the space on the page down to the marks, and the
+    // box the writing actually lives in. Measured only against the marks, the
+    // verse was fitted to a room larger than its own container — the block
+    // then overflowed the box, which scrolls, and the C.V. sat just past its
+    // bottom edge. Present, painted, and needing a scroll to reach.
+    const room = Math.min(stage.clientHeight, Math.max(0, floorY - top)) - (cv
       ? cv.offsetHeight + (parseFloat(getComputedStyle(cv).marginTop) || 0)
       : 0);
     const colW = node.clientWidth;
@@ -1722,6 +1727,17 @@
     // — so there it takes the room instead, and its width follows from its own
     // proportion.
     const uprightH = narrow ? Math.round(H * 0.82) : flatH;
+
+    // The opening thumbnail is a title card, not a piece of the work, and on a
+    // phone every pixel of it is a pixel between the reader and the first
+    // execution. Held to a third of the column there.
+    if (narrow) {
+      const openH = Math.round(H * 0.34);
+      sc.querySelectorAll("img.opener").forEach((im) => {
+        im.style.height = openH + "px";
+        im.style.objectFit = "cover";
+      });
+    }
     sc.querySelectorAll("img.upright").forEach((im) => {
       if (uprightH > 0) im.style.height = uprightH + "px";
     });
@@ -1786,7 +1802,16 @@
 
     // The first and last rows each have to be able to sit in the middle, and
     // they are not the same height, so they do not get the same padding.
-    const padTop = Math.max(0, Math.round((H - heights[0]) / 2));
+    // The opening row is centred at rest, which on a wide screen is right: the
+    // campaign opens on its own name with air above and below. On a phone that
+    // air is half the column, and the first piece then sits a full screen
+    // down — the campaign opened on a thumbnail and you had to hunt for the
+    // work. There the opening row starts near the top instead. Not at it: the
+    // row nearest the middle is the one whose name is written at the foot, and
+    // pushed all the way up the opening row loses that to the piece below it.
+    const padTop = narrow
+      ? Math.min(40, Math.max(0, Math.round((H - heights[0]) / 2)))
+      : Math.max(0, Math.round((H - heights[0]) / 2));
     const padBottom = Math.max(0, Math.round((H - heights[heights.length - 1]) / 2));
     sc.style.paddingTop = padTop + "px";
     sc.style.paddingBottom = padBottom + "px";
