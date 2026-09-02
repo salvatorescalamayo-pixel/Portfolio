@@ -377,8 +377,9 @@
     margin-left:.4em;
   }
   @media (min-width:64rem){ .role{font-size:1rem} }
-  /* On a narrow bar the nav has the right of way. */
-  @media (max-width:34rem){ .role{display:none} }
+  /* It belongs to the mark, so it stays on every screen. On a narrow bar it
+     gives up size rather than presence. */
+  @media (max-width:34rem){ .role{font-size:.75rem;margin-left:.35em} }
   .sig:hover{opacity:.5}
   .sig:focus-visible{outline:none;text-decoration:underline;text-underline-offset:.24em}
 
@@ -744,6 +745,23 @@
        here, and the thumbnails were coming out 228px wide on a 375px screen. */
     .grid{width:100%;margin:0}
 
+    /* And with the grid across the whole width, the line that names what you
+       are pointing at had nowhere to sit but on top of the pictures — it was
+       being read straight over a thumbnail, halfway down. It comes out of the
+       left third, goes back into the flow, and takes its place above them. */
+    .work{display:flex;flex-direction:column;gap:.7rem}
+    .work .hover-line{
+      position:static;transform:none;
+      width:100%;padding-right:0;
+      top:auto;left:auto;
+      /* Room for two lines, kept whether or not there are two. The height the
+         rows get is what is left after this, and it is measured before the
+         line has been written — reserved, the sum comes out the same however
+         long the name under your finger happens to be, and the pictures never
+         re-flow as it changes. */
+      height:3.25em;overflow:hidden;
+    }
+
     /* A campaign stops being two columns and becomes two rows: the name and
        its line above, the work full width below. Kept as a grid so the scroll
        column still gets a bounded height to snap inside — minmax(0,1fr), or a
@@ -760,7 +778,25 @@
 
     /* The head is read once, at the top, so it does not need the height a
        column gave it. */
-    .camp-head{align-self:start}
+    /* The line under the name is hung out of the flow on the desktop, where it
+       has an empty column to hang into. Stacked, it hung straight over the
+       work — the subtitle was being read on top of the pieces scrolling under
+       it. Here it goes back into the flow, so the head owns its full height,
+       and the head carries the page's own paper behind it so nothing can ever
+       show through the writing. */
+    .camp-head{
+      align-self:start;
+      position:sticky;top:0;z-index:2;
+      background:var(--paper,#fff);
+      /* Not pressed against the top edge — the name reads as the start of a
+         page rather than as a bar stuck to the frame. */
+      padding-top:1.1rem;
+      padding-bottom:.85rem;
+    }
+    .camp-head .camp-line{
+      position:static;
+      margin-top:.9rem;
+    }
 
     /* The bio is written to sit on one screen with nothing to scroll. When a
        phone is too short to hold it at a legible size, this is what gives. */
@@ -998,7 +1034,7 @@
   // What the left third says when nothing is being pointed at. It is written
   // on arrival, at the rhythm the home page writes at, and it is what the line
   // falls back to when the cursor leaves a piece.
-  const RESTING = "Few stuff.";
+  const RESTING = "Some stuff.";
 
   // Set against the .15s ink transition, this leaves two or three characters
   // pale at the writing edge at any moment — the marker that shows where the
@@ -1285,11 +1321,20 @@
     return bag.shift();
   };
 
+  // A phone has height to spare where it has no width, so the break between
+  // one sentence and the next is opened to a full blank line. On the desktop
+  // the tighter setting stands — there the whole piece has to hold together as
+  // one block in the middle of the page.
+  const homeText = (i) =>
+    window.matchMedia("(max-width:48rem)").matches
+      ? LINES[i].replace(/\n/g, "\n\n")
+      : LINES[i];
+
   const showText = () => {
     last = deal();
     view = "text";
     sync();
-    write(LINES[last]);
+    write(homeText(last));
   };
 
   const prompt = document.getElementById("prompt");
@@ -2095,7 +2140,21 @@
     const gcs = getComputedStyle(grid);
     const gapCol = parseFloat(gcs.columnGap) || 0;
     const gapRow = parseFloat(gcs.rowGap) || 0;
-    const room = main.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+    let room = main.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+
+    // On a phone the line sits above the pictures instead of beside them, and
+    // height it takes is height the rows cannot have. Read off the line itself
+    // rather than assumed from the width: it is only in the flow when the
+    // stylesheet has put it there, and that is the one case to answer for.
+    const line = grid.parentElement && grid.parentElement.querySelector(".hover-line");
+    const stacked = !!line && getComputedStyle(line).position === "static";
+    if (stacked) {
+      const stack = parseFloat(getComputedStyle(grid.parentElement).rowGap) || 0;
+      // Plus a breath at the foot. Filling the box exactly left the last row
+      // sitting a finger's width off the circle and the square, as though it
+      // were resting on them.
+      room -= line.getBoundingClientRect().height + stack + 34;
+    }
 
     // Two across, three down, filling the half the pictures have — the whole
     // of it, from the top of the page to where the writing at the foot begins.
@@ -2128,9 +2187,13 @@
     // The first thing actually printed at the foot, not the first node: the
     // line over the circle lives there too and is empty on this view, so
     // asking for the first child measured a box with nothing in it.
+    // Stacked, there is nothing to optically centre: the grid is no longer the
+    // only thing in the box, and the shift computed for it pushed the last row
+    // straight through the foot of the page. It simply sits under the line.
     const foot = document.querySelector("footer");
     const firstAtFoot = foot && (foot.querySelector(".marks") || foot.firstElementChild);
-    if (firstAtFoot) {
+    if (stacked) grid.style.marginTop = "0px";
+    else if (firstAtFoot) {
       grid.style.marginTop = "0px";
       const padTop = parseFloat(cs.paddingTop) || 0;
       const lead = Math.max(0, firstAtFoot.getBoundingClientRect().top - main.getBoundingClientRect().bottom);
@@ -2375,7 +2438,7 @@
   });
 
   showText();                           // a line of my own, chosen at random
-  raiseFurniture(LINES[last].length * PER);  // everything else, once it lands
+  raiseFurniture(homeText(last).length * PER);  // everything else, once it lands
 })();
 </script>
 </body>
