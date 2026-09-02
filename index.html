@@ -346,12 +346,40 @@
   /* It arrives the way everything at the foot arrives — brought up on
      opacity, not switched on. Kept in the row while it is invisible so the
      row does not jump, and deaf to the pointer until it is really there. */
+  /* Both things that live at the right of the row are wrapped together and the
+     wrapper takes the auto margin. Given one each, the free space is split
+     between them and neither ends on the rule. */
+  /* The arrow and the line never show at once, and neither may take room from
+     the other: side by side in the flow, the invisible one still had its width
+     and pushed the visible one a hundred and twenty pixels short of the rule.
+     They are stacked on the same point instead — the end of the row, which is
+     the end of the rule — so whichever is showing ends exactly there. */
+  .marks-end{
+    margin-left:auto;position:relative;
+    height:2rem;display:flex;align-items:center;
+  }
+  .marks-end > *{position:absolute;right:0;top:50%;transform:translateY(-50%)}
   #back{
-    margin-left:auto;
     opacity:0;pointer-events:none;
     transition:opacity .5s ease-out;
   }
   footer.in-camp #back{opacity:1;pointer-events:auto}
+
+  /* Said once you have been here before. Set exactly as the line beside the
+     mark is — same face, same size, same colour, same weight of grey — because
+     it is the same voice speaking, just from the other end of the row. It ends
+     on the rule, like everything else at that edge, and it is brought up on
+     opacity as the bio starts being written rather than switched on. */
+  .knew{
+    font-size:.875rem;color:var(--chrome);
+    letter-spacing:.02em;white-space:nowrap;
+    opacity:0;transition:opacity .6s ease-out;
+    cursor:pointer;pointer-events:none;
+  }
+  footer.knew-on .knew{pointer-events:auto}
+  footer.knew-on .knew:hover{opacity:.8}
+  @media (min-width:64rem){ .knew{font-size:1rem} }
+  footer.knew-on .knew{opacity:.55}
 
   /* You arrive at a blank page with a sentence being written on it. Only once
      that has landed does the rest of the furniture turn up — the prompt, the
@@ -858,7 +886,10 @@
   <div class="marks">
     <button class="ring-button" id="ring" aria-label="Another"><span class="ring"></span></button>
     <button class="ring-button" id="leaf" aria-label="A photograph, and what it turned into"><span class="ring box"></span></button>
-    <button class="ring-button" id="back" aria-label="Back to the work"><span class="ring arrow"></span></button>
+    <span class="marks-end">
+      <button class="ring-button" id="back" aria-label="Back to the work"><span class="ring arrow"></span></button>
+      <span class="knew" id="knew">i already know you</span>
+    </span>
   </div>
   <div class="rule"></div>
   <div class="bar">
@@ -1335,6 +1366,10 @@
     // flag goes on the footer rather than on main, because the foot of the
     // page is not inside it.
     footer.classList.toggle("in-camp", view === "campaign");
+    // The line at the far end belongs to the bio and to nowhere else, and only
+    // once you have been there before. Set here rather than where the bio is
+    // built, so that leaving takes it away as surely as arriving brings it.
+    footer.classList.toggle("knew-on", view === "about" && aboutOpened > 1);
     // The line over the circle belongs to the opening screen and to nowhere
     // else. Leave the home page — for work, for a campaign, for the bio — and
     // it goes, whether or not the circle has been pressed yet.
@@ -1448,8 +1483,15 @@
     node.classList.add("on");
   };
 
+  // How many times the bio has been opened in this visit. The line at the foot
+  // is for somebody who has read it and come back — so it waits for the second
+  // time and every time after, and it is forgotten when the page is.
+  let aboutOpened = 0;
+  let bioNode = null, bioStarted = 0;   // what is being written, and since when
+
   const showAbout = () => {
     view = "about";
+    aboutOpened++;
     sync();
     const p = document.createElement("div");
     p.className = "prose bio";
@@ -1464,6 +1506,8 @@
     cv.textContent = "C.V.";
     stage.replaceChildren(p, cv);
     typeBlocks(p, ABOUT.split("\n\n"), ABOUT_PER);
+    bioNode = p;
+    bioStarted = performance.now();
     ringWhileWriting([...ABOUT].length, ABOUT_PER);
     fitBio();
     setTimeout(() => {
@@ -1599,6 +1643,7 @@
       return Math.round(guess) + GAP;
     });
     steps.forEach((s, i) => { s.style.height = heights[i] + "px"; });
+
     // The first and last rows each have to be able to sit in the middle, and
     // they are not the same height, so they do not get the same padding.
     const padTop = Math.max(0, Math.round((H - heights[0]) / 2));
@@ -2432,6 +2477,34 @@
   // The arrow ends where the rule ends. Both the row of marks and the rule
   // run the full width of the foot, so the auto margin in the stylesheet puts
   // its right edge on the end of the line with nothing measured here.
+
+  // Somebody who has read this before does not need to watch it being written
+  // again. Pressing the line runs the rest of it out at once — it goes nowhere
+  // and changes nothing else — and then the line takes itself away, having
+  // said the only thing it had to say.
+  //
+  // The writing is played by the compositor, one animation per character with
+  // its own delay, so the way to hurry it is to rewrite those delays. Only the
+  // ones still to come: a character already inked would restart its animation
+  // and blink. Which those are is worked out from the clock rather than read
+  // off the page — the step between characters is known, and so is the moment
+  // the writing began.
+  // The rest of the piece runs out inside this, however much of it is left —
+  // a fixed step per character was still two and a half seconds with six
+  // hundred to go, which is not "quickly", it is just less slowly.
+  const RUSH_MS = 420;
+  document.getElementById("knew").addEventListener("click", () => {
+    footer.classList.remove("knew-on");
+    if (!bioNode) return;
+    const chars = [...bioNode.querySelectorAll(".ch")];
+    const done = Math.max(0, Math.floor((performance.now() - bioStarted) / ABOUT_PER));
+    const left = chars.length - done;
+    const step = left > 0 ? RUSH_MS / left : 0;
+    chars.forEach((c, i) => {
+      if (i <= done) return;            // already landed; leave it alone
+      c.style.animationDelay = ((i - done) * step) + "ms";
+    });
+  });
 
   // The mark is the way home. It answers from every view, including from
   // inside a campaign — which is the one place with a picture possibly still
