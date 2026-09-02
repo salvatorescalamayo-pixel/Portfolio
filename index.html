@@ -1976,6 +1976,12 @@
       const free = h > room;
       s.style.scrollSnapAlign = free ? "start" : "";
       if (free) s.dataset.free = "1"; else delete s.dataset.free;
+      // A tall piece anchors by its top, a short one by its middle, and the
+      // two land a row's worth of air apart — the same flick arrived forty
+      // eight pixels further on in one campaign than in another. The tall ones
+      // are told to snap that much earlier, so every campaign travels the same
+      // distance from its cover to its first piece.
+      s.style.scrollMarginTop = (free && narrowNow) ? "48px" : "";
       // On a phone the opening row keeps no stop of its own. Its own snap sat
       // two hundred pixels from the first execution's, so a flick off the
       // thumbnail was inside both and the column was pulled straight back to
