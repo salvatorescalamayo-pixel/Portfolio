@@ -1066,10 +1066,11 @@
         // either half shown on its own. Four at a time is what lets them be
         // big. The head and the line do not change between the two, so the
         // second reads as more of the same run rather than as a new piece.
-        // Wide: the block of four, as the campaign was laid out.
-        { label: "OOH", img: "assets/ads-from-trash-ooh-1.webp", only: "wide",
-          note: "Taped to the walls the donation bins stand against." },
-        { label: "OOH", img: "assets/ads-from-trash-ooh-2.webp", only: "wide",
+        // One execution, so one row: the two blocks of four butted together
+        // with no white between them. It is taller than the screen by design —
+        // a piece the column cannot hold whole takes its stop at its top, so
+        // you land on the first four and the scroll runs free from there.
+        { label: "OOH", img: "assets/aft-wide.webp", only: "wide",
           note: "Taped to the walls the donation bins stand against." },
         // Narrow: the same eight photographs, two to a screen — the garment
         // with its headline and under it the close-up cut from the same piece.
@@ -1077,13 +1078,7 @@
         // each, and none of them can be read. `upright` is what makes them
         // big: it hands the picture the height of the column and lets its
         // width follow, rather than the width with the height left over.
-        { label: "OOH", img: "assets/aft-1.webp", upright: true, only: "narrow",
-          note: "Taped to the walls the donation bins stand against." },
-        { label: "OOH", img: "assets/aft-2.webp", upright: true, only: "narrow",
-          note: "Taped to the walls the donation bins stand against." },
-        { label: "OOH", img: "assets/aft-3.webp", upright: true, only: "narrow",
-          note: "Taped to the walls the donation bins stand against." },
-        { label: "OOH", img: "assets/aft-4.webp", upright: true, only: "narrow",
+        { label: "OOH", img: "assets/aft-tall.webp", only: "narrow",
           note: "Taped to the walls the donation bins stand against." }
       ] },
     { name: "Pick a Side",      img: "assets/pick-a-side.jpg",
@@ -1614,8 +1609,18 @@
     // whole of it, the verse filled the screen and the C.V. — which sits below
     // it, inside the same box — was pushed off the bottom of the page. That is
     // why it kept going missing on a phone: it was not late, it was outside.
+    // The room is everything between the top of the writing and the first
+    // mark at the foot, less the document offered under it. Taken as the
+    // stage's own height it stopped short: the page keeps a margin below the
+    // stage and the foot keeps one above its marks, and those sixty-odd pixels
+    // were being left empty while the verse ran off the bottom of the screen.
     const cv = stage.querySelector(".cv-link");
-    const room = stage.clientHeight - (cv
+    const marks = document.querySelector("footer .marks");
+    const top = stage.getBoundingClientRect().top;
+    const floorY = marks
+      ? marks.getBoundingClientRect().top - 12   // a breath over the marks
+      : top + stage.clientHeight;
+    const room = Math.max(0, floorY - top) - (cv
       ? cv.offsetHeight + (parseFloat(getComputedStyle(cv).marginTop) || 0)
       : 0);
     const colW = node.clientWidth;
@@ -1647,7 +1652,10 @@
     // piece on screen and none of it readable. So the floor applies here too,
     // and it is a higher floor on a small screen: past that point the line is
     // allowed to wrap, which is the lesser of the two losses.
-    const floor = window.matchMedia("(max-width:48rem)").matches ? 15 : FLOOR;
+    // Fifteen was a floor the piece could not always reach: on a short phone
+    // it stopped there and ran off the bottom of the screen instead, taking
+    // the C.V. with it. Twelve still reads, and it fits.
+    const floor = window.matchMedia("(max-width:48rem)").matches ? 12 : FLOOR;
     let size = widest > colW ? Math.max(floor, Math.floor(base * colW / widest)) : base;
     node.style.fontSize = size + "px";
 
@@ -1684,13 +1692,20 @@
     // first row was then already a quarter of the way to the next one before
     // the reader had touched anything.
     const H = sc.clientHeight;
+    // First of all, because nearly every measurement below asks which of the
+    // two the page is being read on.
+    const narrow = window.matchMedia("(max-width:48rem)").matches;
     // The gap between one piece and the next is the same everywhere, whatever
     // the pieces are. Rows all one height cannot do that: a long picture and a
     // 16:9 film leave very different amounts of air inside the same box, and
     // the distance from the foot of one to the head of the next changes with
     // every piece. So each row is its own piece plus the gap — half of it
     // above, half below — and the distance between any two is exactly GAP.
-    const GAP = 96;
+    // Ninety-six pixels of air between pieces is generous on a wide screen and
+    // most of a phone's column on a narrow one: the opening thumbnail plus its
+    // share of that air came to more than a screenful, so the first execution
+    // was three flicks away. Half the air on a phone puts it within one.
+    const GAP = narrow ? 48 : 96;
     const steps = [...sc.querySelectorAll(".step")];
 
     // An upright piece is given the height a flat one would have in the same
@@ -1699,10 +1714,6 @@
     // measured, not after — measured first, the row would be built around the
     // height the film happened to have at that moment and then the film would
     // change underneath it.
-    // Declared before anything reads it: sizing a piece by it a dozen lines
-    // above where it was first set is a reference to a variable that does not
-    // exist yet, and the whole fitting throws.
-    const narrow = window.matchMedia("(max-width:48rem)").matches;
     const flatH = Math.round((sc.querySelector(".step-media")?.clientWidth || 0) * 9 / 16);
     // On a wide screen an upright piece is given the height a flat one would
     // have, so its row is the same depth as every other and the rhythm of the
@@ -1890,8 +1901,13 @@
     steps.forEach((s) => {
       const m = s.querySelector(".beats, .phones, .media-text-link, img, video");
       const h = m ? m.getBoundingClientRect().height : 0;
+      // A piece taller than the column gets its stop at its top rather than at
+      // its middle: you land on the head of it, and from there the scroll is
+      // free to run down the rest. Centred, it could never be read — its top
+      // and its bottom were off the screen at once and every attempt to reach
+      // either was pulled back.
       const free = h > room;
-      s.style.scrollSnapAlign = free ? "none" : "";
+      s.style.scrollSnapAlign = free ? "start" : "";
       if (free) s.dataset.free = "1"; else delete s.dataset.free;
     });
 
