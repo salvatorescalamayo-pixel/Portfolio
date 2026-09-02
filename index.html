@@ -822,12 +822,13 @@
       position:static;transform:none;
       width:100%;padding-right:0;
       top:auto;left:auto;
-      /* Room for two lines, kept whether or not there are two. The height the
-         rows get is what is left after this, and it is measured before the
-         line has been written — reserved, the sum comes out the same however
-         long the name under your finger happens to be, and the pictures never
-         re-flow as it changes. */
-      height:3.25em;overflow:hidden;
+      /* One line, kept whether or not there is one. Reserved rather than
+         measured, so the sum below comes out the same before the line has been
+         written and the pictures never re-flow as it changes. Two lines' worth
+         was held here at first, which is thirty pixels of nothing on a screen
+         with no pointer to hover with: the line only ever reads "Some stuff."
+         on a phone. */
+      height:1.9em;overflow:hidden;
     }
 
     /* A campaign stops being two columns and becomes two rows: the name and
@@ -865,6 +866,14 @@
       position:static;
       margin-top:.9rem;
     }
+
+    /* One piece at a time, and nothing else. On a wide screen the rows either
+       side are held at a fifth so the column reads as a run you are partway
+       down; on a phone the column is so short that a fifth of the next row is
+       just a strip of something else along the top edge. Only what is in the
+       middle of the screen is on it. */
+    .step{opacity:0}
+    .step.now{opacity:1}
 
     /* The bio is written to sit on one screen with nothing to scroll. When a
        phone is too short to hold it at a legible size, this is what gives. */
@@ -1512,9 +1521,15 @@
     bioStarted = performance.now();
     ringWhileWriting([...ABOUT].length, ABOUT_PER);
     fitBio();
+    // Offered after the reading has started, not alongside it — but the whole
+    // piece takes twenty-one seconds to write itself out, and waiting for the
+    // last letter meant the document was never there when anybody looked. It
+    // comes in once you are into the writing, and at the latest a couple of
+    // seconds in, whichever the piece reaches first.
+    const written = [...ABOUT].length * ABOUT_PER;
     setTimeout(() => {
       if (view === "about") cv.classList.add("on");
-    }, [...ABOUT].length * ABOUT_PER + 200);
+    }, Math.min(written, 2400) + 200);
   };
 
   // There is to be no scroll on the bio, on any screen. Nineteen lines of
@@ -2242,8 +2257,9 @@
       const stack = parseFloat(getComputedStyle(grid.parentElement).rowGap) || 0;
       // Plus a breath at the foot. Filling the box exactly left the last row
       // sitting a finger's width off the circle and the square, as though it
-      // were resting on them.
-      room -= line.getBoundingClientRect().height + stack + 34;
+      // were resting on them — but a breath is all it is, and every pixel kept
+      // back here is a pixel off the height of all six pictures.
+      room -= line.getBoundingClientRect().height + stack + 14;
     }
 
     // Two across, three down, filling the half the pictures have — the whole
