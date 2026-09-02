@@ -111,22 +111,33 @@
   /* The sheet fills the layer and centres what it holds, rather than shrinking
      to fit it: a box with no height of its own gives the sheet's own max-height
      nothing to be a share of, and the scan collapses to nothing. */
-  /* The sheet arrives the way the tiles do on the page this borrows from: out
-     of focus and not there at all, coming to both at once over half a second.
-     Read off that page's own rule — filter and opacity, .5s, ease, blur 20px
-     down to none — rather than approximated by eye. */
+  /* The sheet itself does not fade — its pieces do, one at a time and out of
+     order. So the block is simply there, and everything that moves is below. */
   .zine .leaf{
     position:absolute;inset:0;
     display:flex;align-items:center;justify-content:center;
-    opacity:0;filter:blur(20px);
-    transition:filter .5s ease,opacity .5s ease;
+    opacity:0;
   }
-  .zine .leaf.up{opacity:1;filter:blur(0px)}
-  /* Leaving is quicker than arriving, and back out through the same blur. */
+  .zine .leaf.up{opacity:1}
+  /* Leaving is one movement, though — the whole sheet out through a blur. */
   .zine .leaf.down{
     opacity:0;filter:blur(20px);
     transition:filter .26s ease-in,opacity .26s ease-in;
   }
+  /* The picture still loads and still lays itself out, because that is what
+     sets the size the grid is cut to. It just is not the thing you look at. */
+  .zine .leaf img.ruler{opacity:0}
+  .zine .mosaic{position:absolute}
+  /* One piece of the sheet. It carries the whole picture as a background,
+     shifted to its own cell, and arrives out of focus and not there — the same
+     half second, on the same curve, as the page this is taken from. */
+  .zine .piece{
+    position:absolute;
+    background-repeat:no-repeat;
+    opacity:0;
+    transition:filter .5s ease,opacity .5s ease;
+  }
+  .zine .piece.visible{opacity:1;filter:blur(0px)}
   /* A fixed box the picture is fitted inside, so pictures of different shapes
      all land on the same two lines and none of them resizes the block. */
   /* The picture keeps its own shape and sits on the middle of the block; the
@@ -351,19 +362,21 @@
     cursor:pointer;transition:opacity .2s;
   }
   @media (min-width:64rem){ .sig{font-size:1.875rem} }
-  /* Reads on from the name rather than under it — the same face at the same
-     size, sitting on the same baseline, only lower case and a shade back so
-     the wordmark still leads. */
+  /* Set hard against the name, small, on its baseline — so the two read as one
+     mark rather than as a name and a caption. Baseline is why they are wrapped
+     together: the bar centres what it holds, and a line this much smaller
+     would float in the middle of the tall one beside it. The bar also spaces
+     its children apart, so the pair takes the auto margin and leaves the two
+     words on the right exactly where they were. */
+  .sig-wrap{display:flex;align-items:baseline;margin-right:auto}
   .role{
-    font-size:1.5rem;color:var(--chrome);opacity:.55;
-    letter-spacing:.01em;margin-left:.45em;
-    white-space:nowrap;
-    /* The bar spaces its children apart, and a third one would be left
-       hovering in the middle of it. This keeps the line against the name and
-       leaves the two words on the right where they were. */
-    margin-right:auto;
+    font-size:.875rem;color:var(--chrome);opacity:.55;
+    letter-spacing:.02em;white-space:nowrap;
+    /* A word space. It has to be a margin: the pair is a flex row, and flex
+       throws away the whitespace written between its children. */
+    margin-left:.4em;
   }
-  @media (min-width:64rem){ .role{font-size:1.875rem} }
+  @media (min-width:64rem){ .role{font-size:1rem} }
   /* On a narrow bar the nav has the right of way. */
   @media (max-width:34rem){ .role{display:none} }
   .sig:hover{opacity:.5}
@@ -732,8 +745,7 @@
   </div>
   <div class="rule"></div>
   <div class="bar">
-    <button class="sig" id="btn-sig">SALVA.</button>
-    <span class="role">is a copywriter</span>
+    <span class="sig-wrap"><button class="sig" id="btn-sig">SALVA</button><span class="role">is a copywriter.</span></span>
     <nav class="nav">
       <button id="btn-work" aria-pressed="false">Work</button>
       <button id="btn-about" aria-pressed="false">About</button>
@@ -1007,10 +1019,33 @@
   // A page comes up on opacity and the one it replaces goes with it. Both lie
   // in the same place, so nothing moves and nothing is revealed — one is
   // simply there instead of the other.
+  // A bag, not a dice. Drawing at random meant the same sheet could come up
+  // twice in a row's time while another went ten presses unseen. So the twelve
+  // are shuffled and then dealt one at a time: every one of them has been in
+  // front of you before any of them repeats, and the deck is shuffled again
+  // when it runs out — with the seam guarded, so the last of one deal and the
+  // first of the next are never the same sheet.
+  // The same bag the writing on the home page is dealt from, kept separate
+  // because it holds sheets rather than lines.
+  let sheetBag = [];
+  const dealSheet = () => {
+    if (!sheetBag.length) {
+      sheetBag = PERSONAL.map((_, i) => i);
+      for (let i = sheetBag.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        const t = sheetBag[i]; sheetBag[i] = sheetBag[j]; sheetBag[j] = t;
+      }
+      // Dealt off the end, so it is the end that has to differ from the last.
+      if (sheetBag.length > 1 && sheetBag[sheetBag.length - 1] === zineAt) {
+        sheetBag.push(sheetBag.shift());
+      }
+    }
+    return sheetBag.pop();
+  };
+
   const nextLeaf = () => {
     const mine = ++zineGen;
-    let n = zineAt;
-    while (n === zineAt && PERSONAL.length > 1) n = Math.floor(Math.random() * PERSONAL.length);
+    const n = dealSheet();
     zineAt = n;
     const shot = PERSONAL[n];
 
@@ -1048,8 +1083,69 @@
       zineLayer.replaceChildren(leaf);  // one sheet, always — nothing left under it
       void leaf.offsetWidth;            // let opacity:0 be painted first
       leaf.classList.add("up");
-      // And that is the end of it. The writing arrived with the picture,
-      // because on this page they are the same object.
+      mosaic(leaf, shotImg, shot, mine);
+    });
+  };
+
+  // The sheet does not fade in whole. It is cut into a grid, every piece given
+  // its own starting blur and its own moment, and the picture assembles itself
+  // out of order — the way the tiles do on the page this is taken from. Read
+  // off that page's own code rather than guessed at: each piece is a div
+  // carrying the whole image as a background, shifted to its own cell, and each
+  // is let go after a random wait inside one spread.
+  const TILE = 500;                     // what one piece takes to arrive
+  const SPREAD = 1000;                  // the window the waits are drawn from
+  const BLUR_LO = 12, BLUR_HI = 28;     // each piece starts somewhere in here
+
+  const mosaic = (leaf, img, src, mine) => {
+    const lr = leaf.getBoundingClientRect();
+    const r = img.getBoundingClientRect();
+    if (!r.width || !r.height) return;  // nothing measured, leave the sheet whole
+
+    // Cells kept as near square as the sheet allows, at about two dozen of them.
+    const aspect = r.width / r.height;
+    const rows = Math.max(3, Math.round(Math.sqrt(25 / aspect)));
+    const cols = Math.max(3, Math.round(rows * aspect));
+    const cw = r.width / cols, ch = r.height / rows;
+
+    const grid = document.createElement("div");
+    grid.className = "mosaic";
+    grid.style.left = Math.round(r.left - lr.left) + "px";
+    grid.style.top = Math.round(r.top - lr.top) + "px";
+    grid.style.width = r.width + "px";
+    grid.style.height = r.height + "px";
+
+    const pieces = [];
+    for (let y = 0; y < rows; y++) {
+      for (let x = 0; x < cols; x++) {
+        // Whole-pixel edges, so the pieces meet exactly: fractional cells leave
+        // hairlines of the page showing through between them.
+        const x0 = Math.round(x * cw), x1 = Math.round((x + 1) * cw);
+        const y0 = Math.round(y * ch), y1 = Math.round((y + 1) * ch);
+        const p = document.createElement("div");
+        p.className = "piece";
+        p.style.width = (x1 - x0) + "px";
+        p.style.height = (y1 - y0) + "px";
+        p.style.left = x0 + "px";
+        p.style.top = y0 + "px";
+        p.style.backgroundImage = "url(" + src + ")";
+        p.style.backgroundSize = r.width + "px " + r.height + "px";
+        p.style.backgroundPosition = "-" + x0 + "px -" + y0 + "px";
+        p.style.filter = "blur(" + (BLUR_LO + Math.random() * (BLUR_HI - BLUR_LO)) + "px)";
+        grid.appendChild(p);
+        pieces.push(p);
+      }
+    }
+    img.classList.add("ruler");         // it measured the sheet; the grid shows it
+    leaf.appendChild(grid);
+
+    pieces.forEach((p) => {
+      const wait = Math.random() * SPREAD;
+      setTimeout(() => {
+        if (mine !== zineGen) return;
+        p.style.filter = "";            // back to the sharp state the class carries
+        p.classList.add("visible");
+      }, wait);
     });
   };
 
