@@ -1132,7 +1132,7 @@
         { label: "The kiosk",
           phones: ["assets/pick-a-side-order.webp", "assets/pick-a-side-checkout.webp"],
           note: "Ordering is like filling in a ballot.\nThen you check out with it." },
-        { label: "The carton", img: "assets/pick-a-side-reminder.webp", fit: true,
+        { label: "The carton", img: "assets/pick-a-side-reminder.webp", fit: true, fitNarrow: 0.68,
           note: "A reminder of the side you picked." },
         // Left at the measure. Given the upright treatment it came out a
         // hundred and fourteen pixels wide — this screen is far narrower than
@@ -1825,9 +1825,17 @@
     // how these two came to hang out of the one they were supposed to sit in.
     // A gap short of it, the whole row lands inside, with half the gap clear
     // above and below, the same air every other row has.
+    //
+    // A piece may ask for a share of that ceiling rather than all of it, and
+    // only on a phone. The carton is one picture of one object: filling the
+    // stop end to end on a narrow screen it read as a wall of red, and the
+    // sticker on it — the whole point of the shot — was legible long before
+    // the picture was that big. On a wide screen it is in proportion, and is
+    // left alone.
     const fitH = Math.max(120, H - GAP);
     sc.querySelectorAll("img.fit").forEach((im) => {
-      im.style.maxHeight = fitH + "px";
+      const share = narrow ? (parseFloat(im.dataset.fitNarrow) || 1) : 1;
+      im.style.maxHeight = Math.round(fitH * share) + "px";
     });
     sc.querySelectorAll("img.upright").forEach((im) => {
       if (uprightH > 0) im.style.height = uprightH + "px";
@@ -2433,7 +2441,11 @@
         // is. Unlike `upright`, which is cut for a film's proportion, this
         // only says "fit" — the height is capped to the column and the width
         // follows from the picture's own shape.
-        if (r.fit) { im.classList.add("fit"); cell.classList.add("center"); }
+        if (r.fit) {
+          im.classList.add("fit");
+          cell.classList.add("center");
+          if (r.fitNarrow) im.dataset.fitNarrow = r.fitNarrow;
+        }
         if (r.big) im.classList.add("big");
         else if (r.strip) im.className = "strip";
         else if (r.opener) im.className = "opener";
