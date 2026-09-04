@@ -2000,6 +2000,17 @@
     if (!head) return;
     const i = Math.max(0, Math.min(steps.length - 1, Math.round(f)));
 
+    // A campaign writing itself in is not overruled by the scroll. The column
+    // settles by a pixel as the rows are given their heights, and that one
+    // pixel is a scroll event — it arrived six milliseconds after the tap and
+    // redrew the head from the position, which wiped the writing before a
+    // character of it had been seen. That is why the name and the line simply
+    // appeared. The writing is left alone while it is happening, and only
+    // while the opening row is still the one in the middle: scroll off it and
+    // the head answers to the scroll again at once.
+    const until = +(head.dataset.writingUntil || 0);
+    if (until && i === 0 && performance.now() < until) return;
+
     // On a phone the head is played to a clock rather than drawn to the
     // scroll. Drawing it to the scroll is something only a snapped column can
     // afford: it always comes to rest on a row, so the sentence always
@@ -2546,15 +2557,21 @@
     scroller.scrollTop = 0;
 
     if (fly) {
-      // The idea is written while the picture travels, and the two finish
-      // together: the last character has to have finished darkening by the
-      // time the picture lands, so the gap between characters is whatever is
-      // left of the flight once that last darkening is taken out of it.
-      if (shortEl && shortEl.textContent) {
-        const text = shortEl.textContent;
-        const per = Math.max(4, Math.round((FLIGHT - INK) / Math.max(1, text.length - 1)));
-        typeInto(shortEl, text, per);
-      }
+      // The campaign writes itself in while its picture travels — the name
+      // first and the line under it, one hand at one speed — and the writing
+      // and the flight finish together: the last character has to have done
+      // its darkening by the time the picture lands, so the gap between
+      // characters is whatever is left of the flight once that darkening is
+      // taken out of it. The step is measured off whichever of the two is
+      // longer, so the name is written in the same hand as the line rather
+      // than crawling to fill the same time.
+      const nameText = h.textContent;
+      const lineText = shortEl ? shortEl.textContent : "";
+      const span = Math.max(nameText.length, lineText.length, 2);
+      const per = Math.max(4, Math.round((FLIGHT - INK) / (span - 1)));
+      if (nameText) typeInto(h, nameText, per);
+      if (lineText) typeInto(shortEl, lineText, per);
+      head.dataset.writingUntil = Math.round(performance.now() + FLIGHT + 80);
       // The place the picture is flying to is held empty from the first frame,
       // rather than from the frame the flight is aimed on. Otherwise the
       // picture is in two places at once for as long as the aiming waits.
