@@ -906,6 +906,13 @@
     .step{opacity:0;transition:opacity .22s linear}
     .step.now{opacity:1}
 
+    /* The scroll runs free here. Snap gathered the column onto a row, and a
+       row was where the writing in the head came from — but a phone loads its
+       pictures while you are already scrolling, every arrival re-measures the
+       rows, and the column was still being pulled about under the hand. The
+       head no longer answers to the position, so nothing is owed to it. */
+    .camp-scroll{scroll-snap-type:none}
+
     /* Each track takes the height it needs rather than a quarter of a shape
        chosen for a wide screen, and they are given more air between them. */
     .beats{gap:14px}
@@ -2015,7 +2022,14 @@
     const sameAsNeighbour = j !== i &&
       (steps[j].dataset.head || "") === (steps[i].dataset.head || "") &&
       (steps[j].dataset.line || "") === (steps[i].dataset.line || "");
-    const hold = sameAsNeighbour ? 1 : held;
+    // None of that on a phone. Writing the head to the scroll position is a
+    // wide-screen pleasure: there the column is snapped, so it always comes to
+    // rest on a row and the sentence always finishes. On a phone the scroll is
+    // free — it stops wherever the hand left it — and a sentence written to
+    // that position stops halfway and stays halfway. There the head simply
+    // says what you are looking at, whole, every time.
+    const hold = window.matchMedia("(max-width:48rem)").matches
+      ? 1 : (sameAsNeighbour ? 1 : held);
 
     scrub(head.querySelector("h1"), steps[i].dataset.head || "", hold);
     scrub(head.querySelector(".short"), steps[i].dataset.line || "", hold);
@@ -2477,20 +2491,34 @@
     // where it really belonged. Everything below now measures a settled page.
     scroller.scrollTop = 0;
 
-    // The idea is written while the picture travels, and the two finish
-    // together: the last character has to have finished darkening by the time
-    // the picture lands, so the gap between characters is whatever is left of
-    // the flight once that last darkening is taken out of it.
-    if (fly && shortEl && shortEl.textContent) {
-      const text = shortEl.textContent;
-      const per = Math.max(4, Math.round((FLIGHT - INK) / Math.max(1, text.length - 1)));
-      typeInto(shortEl, text, per);
-    }
-
-    // The place the picture is flying to is held empty from the first frame,
-    // rather than from the frame the flight is aimed on. Otherwise the picture
-    // is in two places at once for as long as the aiming waits.
-    if (fly) {
+    // A phone opens a campaign with everything already in place: nothing is
+    // written on the way in, and nothing travels across the page.
+    //
+    // Both were promises the page could not keep there. A phone fetches the
+    // campaign's pictures while you are already looking at it, and every one
+    // that arrives re-measures the rows — so the row the flight was aimed at
+    // moves while the flight is in the air, the copy lands where the row used
+    // to be, and the real picture is somewhere else. That is the bounce. The
+    // writing went the same way: a line typed on the way in is finished by
+    // whatever the column does next, and what the column does next is move.
+    // On a wide screen neither happens — the pictures are there, the column is
+    // snapped — so the flight and the writing stay, exactly as they were.
+    const narrowNow = window.matchMedia("(max-width:48rem)").matches;
+    if (narrowNow) {
+      if (fly) { fly.remove(); fly = null; }
+    } else if (fly) {
+      // The idea is written while the picture travels, and the two finish
+      // together: the last character has to have finished darkening by the
+      // time the picture lands, so the gap between characters is whatever is
+      // left of the flight once that last darkening is taken out of it.
+      if (shortEl && shortEl.textContent) {
+        const text = shortEl.textContent;
+        const per = Math.max(4, Math.round((FLIGHT - INK) / Math.max(1, text.length - 1)));
+        typeInto(shortEl, text, per);
+      }
+      // The place the picture is flying to is held empty from the first frame,
+      // rather than from the frame the flight is aimed on. Otherwise the
+      // picture is in two places at once for as long as the aiming waits.
       const seat = scroller.querySelector("img.opener");
       if (seat) seat.style.visibility = "hidden";
     }
@@ -2569,6 +2597,9 @@
     // rest of the scroll pulling against each other.
     let restTimer, correcting = false;
     const centreNearest = () => {
+      // Not on a phone. The scroll is free there: nothing is gathered onto a
+      // row, and the column is never moved out from under the hand.
+      if (window.matchMedia("(max-width:48rem)").matches) return;
       const rows = [...scroller.querySelectorAll(".step")];
       if (!rows.length) return;
       const port = scroller.getBoundingClientRect();
