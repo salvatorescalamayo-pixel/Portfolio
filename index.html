@@ -709,6 +709,10 @@
      film is centred in it — on the same middle as the thumbnail above. */
   .step-media.center{justify-content:center;width:100%}
   .step-media img.upright{width:auto;max-width:100%}
+  /* Held to the column's height with its own shape kept: the width follows the
+     picture rather than the measure, so it lands whole inside the stop instead
+     of running past it. */
+  .step-media img.fit{width:auto;height:auto;max-width:100%}
   /* The one picture that is a door. Sized to what a phone camera can still
      read off a screen, and it keeps the pointer that says so. */
   .step-media .media-link{display:block;line-height:0;max-width:100%}
@@ -1128,14 +1132,14 @@
         { label: "The kiosk",
           phones: ["assets/pick-a-side-order.webp", "assets/pick-a-side-checkout.webp"],
           note: "Ordering is like filling in a ballot.\nThen you check out with it." },
-        { label: "The carton", img: "assets/pick-a-side-reminder.webp",
+        { label: "The carton", img: "assets/pick-a-side-reminder.webp", fit: true,
           note: "A reminder of the side you picked." },
         // Left at the measure. Given the upright treatment it came out a
         // hundred and fourteen pixels wide — this screen is far narrower than
         // the films that rule is cut for, and nothing on it could be read.
         // Taller than the column, so it takes its stop at its top and is
         // scrolled through, like the other long pieces on the site.
-        { label: "The app", img: "assets/pick-a-side-app.webp",
+        { label: "The app", img: "assets/pick-a-side-app.webp", fit: true,
           note: "The election ran live in it, state by state." }
       ] },
     { name: "Numpad Jam",       img: "assets/numpad-jam.jpg",
@@ -1810,6 +1814,21 @@
         im.style.objectFit = "cover";
       });
     }
+    // Capped, not set: the height is a ceiling the picture stays under, and
+    // the width comes from its own proportion. A tall screen recording is far
+    // narrower than the films the upright rule is cut for, so given that rule
+    // it came out a hundred pixels wide and unreadable.
+    //
+    // The ceiling is the stop less the gap the column keeps between rows, not
+    // the stop itself. Every row's box is its picture plus that gap, so a
+    // picture as tall as the stop makes a box taller than the stop — which is
+    // how these two came to hang out of the one they were supposed to sit in.
+    // A gap short of it, the whole row lands inside, with half the gap clear
+    // above and below, the same air every other row has.
+    const fitH = Math.max(120, H - GAP);
+    sc.querySelectorAll("img.fit").forEach((im) => {
+      im.style.maxHeight = fitH + "px";
+    });
     sc.querySelectorAll("img.upright").forEach((im) => {
       if (uprightH > 0) im.style.height = uprightH + "px";
     });
@@ -2410,6 +2429,11 @@
         im.src = r.img;
         im.alt = r.label;
         if (r.upright) { im.className = "upright"; cell.classList.add("center"); }
+        // A piece that has to land whole inside the stop, whatever shape it
+        // is. Unlike `upright`, which is cut for a film's proportion, this
+        // only says "fit" — the height is capped to the column and the width
+        // follows from the picture's own shape.
+        if (r.fit) { im.classList.add("fit"); cell.classList.add("center"); }
         if (r.big) im.classList.add("big");
         else if (r.strip) im.className = "strip";
         else if (r.opener) im.className = "opener";
