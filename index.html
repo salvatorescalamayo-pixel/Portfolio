@@ -2045,12 +2045,14 @@
       if (head.dataset.head === wantHead && head.dataset.line === wantLine) return;
       head.dataset.head = wantHead;
       head.dataset.line = wantLine;
-      // The name and the line are one hand at one speed, so the step is taken
-      // from whichever of them is longer and the pair lands together.
-      const n = Math.max(wantHead.length, wantLine.length, 2);
-      const per = Math.max(6, Math.round(380 / (n - 1)));
-      typeInto(head.querySelector("h1"), wantHead, per);
-      typeInto(head.querySelector(".short"), wantLine, per);
+      // Each takes the same window at its own step, so the name and the line
+      // fill at the same rate and land on the same beat. Given one step
+      // between them the name was down in a fraction of the time the line
+      // took, and the writing was left carrying on below it — which reads as
+      // the effect falling down the page rather than as one arrival.
+      const per = (t) => Math.max(6, Math.round(380 / Math.max(1, t.length - 1)));
+      typeInto(head.querySelector("h1"), wantHead, per(wantHead));
+      typeInto(head.querySelector(".short"), wantLine, per(wantLine));
       return;
     }
 
@@ -2581,13 +2583,13 @@
       // the time the picture lands, so the gap between characters is whatever
       // is left of the flight once that darkening is taken out of it.
       //
-      // On a phone one thing is written, and it is the name. Written with the
-      // line at a shared step, the name — ten characters against the line's
-      // forty — was down inside a tenth of a second, and what you actually
-      // watched was the writing carrying on somewhere further down the page:
-      // the effect appeared to start at the title and fall to the subtitle.
-      // Alone, the name takes the whole flight, at a pace you can see it
-      // written at, and the line under it is simply there.
+      // Both are written, and they finish together. Given one step between
+      // them, the name — ten characters against the line's forty — was down
+      // inside a tenth of a second and the writing then carried on somewhere
+      // further down the page: the effect started at the title and fell to
+      // the subtitle. Each takes the same window at its own step instead, so
+      // the two fill at the same rate and land on the same beat, and there is
+      // nothing left writing after the other has stopped.
       //
       // And it waits for the campaigns you did not choose. Those are copies
       // lying over the whole page while they fade, so writing under them put
@@ -2599,25 +2601,22 @@
       const lineText = shortEl ? shortEl.textContent : "";
       const room = FLIGHT - CLEARED - INK;
       const step = (n) => Math.max(4, Math.round(room / Math.max(1, n - 1)));
-      // The head is held back rather than emptied: the whole of it, the line
-      // included, since the line is not written on a phone and would otherwise
-      // be the one thing sitting across the thumbnails as they go.
+      // The head is held back rather than emptied — the whole of it, so
+      // nothing of it is sitting across the thumbnails as they go.
       head.style.visibility = "hidden";
       head.dataset.writingUntil = Math.round(performance.now() + FLIGHT + 80);
       setTimeout(() => {
         head.style.visibility = "";
         if (view !== "campaign") return;
-        if (narrowNow) {
-          if (nameText) typeInto(h, nameText, step(nameText.length));
-        } else {
-          // A wide screen writes both, in one hand at one speed: the step is
-          // measured off whichever of the two is longer, so the name is
-          // written in the same hand as the line rather than crawling to fill
-          // the time.
-          const per = step(Math.max(nameText.length, lineText.length, 2));
-          if (nameText) typeInto(h, nameText, per);
-          if (lineText) typeInto(shortEl, lineText, per);
-        }
+        // A wide screen writes the two in one hand at one speed, which it can
+        // afford: the head sits in a column of its own beside the work and the
+        // eye takes the pair as one block. A phone reads them one under the
+        // other, where a hand that finishes the name and carries on below is
+        // the thing that reads as falling down the page — so there each is
+        // given the same window at its own step, and they land together.
+        const shared = step(Math.max(nameText.length, lineText.length, 2));
+        if (nameText) typeInto(h, nameText, narrowNow ? step(nameText.length) : shared);
+        if (lineText) typeInto(shortEl, lineText, narrowNow ? step(lineText.length) : shared);
       }, CLEARED);
       // The place the picture is flying to is held empty from the first frame,
       // rather than from the frame the flight is aimed on. Otherwise the
