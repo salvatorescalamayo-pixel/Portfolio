@@ -2557,20 +2557,32 @@
     scroller.scrollTop = 0;
 
     if (fly) {
-      // The campaign writes itself in while its picture travels — the name
-      // first and the line under it, one hand at one speed — and the writing
-      // and the flight finish together: the last character has to have done
-      // its darkening by the time the picture lands, so the gap between
-      // characters is whatever is left of the flight once that darkening is
-      // taken out of it. The step is measured off whichever of the two is
-      // longer, so the name is written in the same hand as the line rather
-      // than crawling to fill the same time.
+      // The campaign writes itself in while its picture travels, and the two
+      // finish together: the last character has to have done its darkening by
+      // the time the picture lands, so the gap between characters is whatever
+      // is left of the flight once that darkening is taken out of it.
+      //
+      // On a phone one thing is written, and it is the name. Written with the
+      // line at a shared step, the name — ten characters against the line's
+      // forty — was down inside a tenth of a second, and what you actually
+      // watched was the writing carrying on somewhere further down the page:
+      // the effect appeared to start at the title and fall to the subtitle.
+      // Alone, the name takes the whole flight, at a pace you can see it
+      // written at, and the line under it is simply there.
+      const narrowNow = window.matchMedia("(max-width:48rem)").matches;
       const nameText = h.textContent;
       const lineText = shortEl ? shortEl.textContent : "";
-      const span = Math.max(nameText.length, lineText.length, 2);
-      const per = Math.max(4, Math.round((FLIGHT - INK) / (span - 1)));
-      if (nameText) typeInto(h, nameText, per);
-      if (lineText) typeInto(shortEl, lineText, per);
+      const step = (n) => Math.max(4, Math.round((FLIGHT - INK) / Math.max(1, n - 1)));
+      if (narrowNow) {
+        if (nameText) typeInto(h, nameText, step(nameText.length));
+      } else {
+        // A wide screen writes both, in one hand at one speed: the step is
+        // measured off whichever of the two is longer, so the name is written
+        // in the same hand as the line rather than crawling to fill the time.
+        const per = step(Math.max(nameText.length, lineText.length, 2));
+        if (nameText) typeInto(h, nameText, per);
+        if (lineText) typeInto(shortEl, lineText, per);
+      }
       head.dataset.writingUntil = Math.round(performance.now() + FLIGHT + 80);
       // The place the picture is flying to is held empty from the first frame,
       // rather than from the frame the flight is aimed on. Otherwise the
