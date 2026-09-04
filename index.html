@@ -1121,15 +1121,20 @@
         { label: "Videocase", note: "",
           video: "assets/pick-a-side.mp4",
           poster: "assets/pick-a-side-poster.jpg" },
-        // One screen of the idea to a row, the way the record's pieces are
-        // split. Each is its own animation, so what a row shows is one thing
-        // happening rather than four at once.
-        { label: "Order", img: "assets/pick-a-side-order.webp",
-          note: "Ordering is like filling up a ballot." },
-        { label: "Checkout", img: "assets/pick-a-side-checkout.webp",
-          note: "Checkout with your ballot." },
-        { label: "Reminder", img: "assets/pick-a-side-reminder.webp",
-          note: "The carton reminds you which side you picked." },
+        // The kiosk and the ballot are one move, not two: you fill the thing
+        // in and then you cast it. They share a row, side by side, which is
+        // also what stops either of them running the height of the screen on
+        // its own. The carton and the app follow, one to a row.
+        { label: "The kiosk",
+          phones: ["assets/pick-a-side-order.webp", "assets/pick-a-side-checkout.webp"],
+          note: "Ordering is like filling in a ballot.\nThen you check out with it." },
+        { label: "The carton", img: "assets/pick-a-side-reminder.webp",
+          note: "A reminder of the side you picked." },
+        // Left at the measure. Given the upright treatment it came out a
+        // hundred and fourteen pixels wide — this screen is far narrower than
+        // the films that rule is cut for, and nothing on it could be read.
+        // Taller than the column, so it takes its stop at its top and is
+        // scrolled through, like the other long pieces on the site.
         { label: "The app", img: "assets/pick-a-side-app.webp",
           note: "The election ran live in it, state by state." }
       ] },
