@@ -899,7 +899,11 @@
        down; on a phone the column is so short that a fifth of the next row is
        just a strip of something else along the top edge. Only what is in the
        middle of the screen is on it. */
-    .step{opacity:0}
+    /* And it goes quickly. Half a second is a fade you can read on a wide
+       screen, where the rows either side are meant to be half-there anyway; on
+       a phone, where they are meant to be gone, it is long enough to arrive at
+       a piece with the last one still lying under it. */
+    .step{opacity:0;transition:opacity .22s linear}
     .step.now{opacity:1}
 
     /* Each track takes the height it needs rather than a quarter of a shape
@@ -1913,16 +1917,15 @@
 
     // The first and last rows each have to be able to sit in the middle, and
     // they are not the same height, so they do not get the same padding.
-    // The opening row is centred at rest, which on a wide screen is right: the
-    // campaign opens on its own name with air above and below. On a phone that
-    // air is half the column, and the first piece then sits a full screen
-    // down — the campaign opened on a thumbnail and you had to hunt for the
-    // work. There the opening row starts near the top instead. Not at it: the
-    // row nearest the middle is the one whose name is written at the foot, and
-    // pushed all the way up the opening row loses that to the piece below it.
-    const padTop = narrow
-      ? Math.min(40, Math.max(0, Math.round((H - heights[0]) / 2)))
-      : Math.max(0, Math.round((H - heights[0]) / 2));
+    // Both screens centre the opening row. The phone used to start it forty
+    // pixels down from the top instead, to keep the first piece from sitting a
+    // screen away — but the saving was thirty pixels and the cost was the whole
+    // head: the column's middle then fell a third of the way to the next row,
+    // and the name and the idea are written to that position, so a campaign
+    // opened with its own name two thirds written and stayed that way. Centred,
+    // the opening row is exactly where the column reads it, and it opens
+    // written.
+    const padTop = Math.max(0, Math.round((H - heights[0]) / 2));
     const padBottom = Math.max(0, Math.round((H - heights[heights.length - 1]) / 2));
     sc.style.paddingTop = padTop + "px";
     sc.style.paddingBottom = padBottom + "px";
@@ -2052,18 +2055,6 @@
       // are told to snap that much earlier, so every campaign travels the same
       // distance from its cover to its first piece.
       s.style.scrollMarginTop = (free && narrowNow) ? "48px" : "";
-      // On a phone the opening row stops at its top rather than its middle.
-      // Centred, its stop sat two hundred pixels from the first execution's
-      // and a flick off the cover fell inside both, so the column was pulled
-      // straight back and the work could not be reached. Given no stop at all
-      // it was worse: the column opens at rest on the cover, and with no snap
-      // point there the browser took the first one it could find and jumped to
-      // the execution on its own, before the reader had touched anything. At
-      // its top the cover is a stop, that stop is exactly where the column
-      // opens, and the pull towards it is gone.
-      if (narrowNow && s === steps[0] && steps.length > 1) {
-        s.style.scrollSnapAlign = "start";
-      }
     });
 
     // Where the middle of the column falls among the rows, as a fraction.
@@ -2486,20 +2477,39 @@
     // where it really belonged. Everything below now measures a settled page.
     scroller.scrollTop = 0;
 
+    // The idea is written while the picture travels, and the two finish
+    // together: the last character has to have finished darkening by the time
+    // the picture lands, so the gap between characters is whatever is left of
+    // the flight once that last darkening is taken out of it.
+    if (fly && shortEl && shortEl.textContent) {
+      const text = shortEl.textContent;
+      const per = Math.max(4, Math.round((FLIGHT - INK) / Math.max(1, text.length - 1)));
+      typeInto(shortEl, text, per);
+    }
+
+    // The place the picture is flying to is held empty from the first frame,
+    // rather than from the frame the flight is aimed on. Otherwise the picture
+    // is in two places at once for as long as the aiming waits.
     if (fly) {
+      const seat = scroller.querySelector("img.opener");
+      if (seat) seat.style.visibility = "hidden";
+    }
+
+    // And the flight is aimed only once the column has been laid out for good
+    // — see the fitting below. Aimed as the campaign was built, it was sent to
+    // where the opening row stood while the rows were still being measured off
+    // pictures that had not been given a width yet; the real fitting then put
+    // that row somewhere else, and the picture arrived, was swapped for the
+    // real one, and the real one was forty pixels away. That swap is the small
+    // correction you see the moment you are inside.
+    let aimed = false;
+    const aim = () => {
+      if (aimed || !fly) return;
+      aimed = true;
       const opener = scroller.querySelector("img.opener");
       if (opener) landThumb(fly, opener);
       else fly.remove();
-      // The idea is written while the picture travels, and the two finish
-      // together: the last character has to have finished darkening by the
-      // time the picture lands, so the gap between characters is whatever is
-      // left of the flight once that last darkening is taken out of it.
-      if (shortEl && shortEl.textContent) {
-        const text = shortEl.textContent;
-        const per = Math.max(4, Math.round((FLIGHT - INK) / Math.max(1, text.length - 1)));
-        typeInto(shortEl, text, per);
-      }
-    }
+    };
 
     // A campaign always opens on its first piece. Mandatory snap decides where
     // to settle the moment the rows get their heights, and it does not reliably
@@ -2526,7 +2536,11 @@
       if (view !== "campaign") return;
       fitCampaign();
       markCurrent(scroller, false);
+      aim();
     }));
+    // A tab that is not being drawn is given no frames at all, so the line
+    // above may never be reached. The copy is never left lying over the page.
+    setTimeout(aim, 140);
 
     markCurrent(scroller, false);   // the opening line is written by the flight, not drawn
 
@@ -2570,12 +2584,6 @@
       // A piece the column cannot hold whole is not brought to rest — see the
       // note where the flag is set.
       if (want.dataset.free) return;
-      // Nor is the opening row, on a phone. It has no snap of its own there,
-      // and this was undoing that on its own: a flick off the title card left
-      // the cover still nearest the middle, so the column was walked straight
-      // back to it and the work could never be reached.
-      if (window.matchMedia("(max-width:48rem)").matches &&
-          want === rows[0] && rows.length > 1) return;
       correcting = true;
       want.scrollIntoView({ behavior: "smooth", block: "center" });
       setTimeout(() => { correcting = false; }, 700);
