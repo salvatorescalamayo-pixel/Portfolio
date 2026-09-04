@@ -1248,6 +1248,17 @@
   // idea underneath the name is written to this same measure, so the two land
   // together rather than one waiting on the other.
   const FLIGHT = 600;
+  // And how the five you did not choose leave. They are copies laid over the
+  // page at z-index sixty, so for as long as they are fading they are fading
+  // over the campaign that has already arrived underneath — over its name and
+  // its line, which is where the top-left of the grid sat. At the old timing
+  // that was five hundred and seventy milliseconds of thumbnails dissolving
+  // across the writing. They go quickly now, and the writing waits for them:
+  // the others clear, then the campaign writes itself. One thing after the
+  // other rather than both at once.
+  const LEAVE_STEP = 16;                // between one leaving and the next
+  const LEAVE_FADE = 140;               // how long one takes to go
+  const CLEARED = LEAVE_STEP * 5 + LEAVE_FADE;
 
   const stage = document.getElementById("stage");
   const main = document.querySelector("main");
@@ -1913,7 +1924,15 @@
       // pixels taller, and that campaign's first execution sat further down
       // than the others' — the one thing this shape was meant to make equal.
       const fixed = (narrow && openH && s.querySelector("img.opener")) ? openH : 0;
-      const guess = fixed || h || Math.round(s.clientWidth * 9 / 16);
+      // A row whose whole piece is one line of text is given the room a
+      // picture would have had. Sized to the text, it was twenty five pixels
+      // of link in the middle of the column with the block of garments above
+      // it still a fifth lit and ten times its size — the screen read as the
+      // garments, with a link under them. Given the column's own height, the
+      // rows either side are pushed off it and the line is on its own, which
+      // is what it is.
+      const alone = s.querySelector(".media-text-link") ? Math.max(0, H - GAP) : 0;
+      const guess = alone || fixed || h || Math.round(s.clientWidth * 9 / 16);
       return Math.round(guess) + GAP;
     });
     steps.forEach((s, i) => { s.style.height = heights[i] + "px"; });
@@ -2569,21 +2588,37 @@
       // the effect appeared to start at the title and fall to the subtitle.
       // Alone, the name takes the whole flight, at a pace you can see it
       // written at, and the line under it is simply there.
+      //
+      // And it waits for the campaigns you did not choose. Those are copies
+      // lying over the whole page while they fade, so writing under them put
+      // the name and the line across five dissolving thumbnails. The writing
+      // starts when the last of them has gone, and is given what is left of
+      // the flight, so it still finishes as the picture lands.
       const narrowNow = window.matchMedia("(max-width:48rem)").matches;
       const nameText = h.textContent;
       const lineText = shortEl ? shortEl.textContent : "";
-      const step = (n) => Math.max(4, Math.round((FLIGHT - INK) / Math.max(1, n - 1)));
-      if (narrowNow) {
-        if (nameText) typeInto(h, nameText, step(nameText.length));
-      } else {
-        // A wide screen writes both, in one hand at one speed: the step is
-        // measured off whichever of the two is longer, so the name is written
-        // in the same hand as the line rather than crawling to fill the time.
-        const per = step(Math.max(nameText.length, lineText.length, 2));
-        if (nameText) typeInto(h, nameText, per);
-        if (lineText) typeInto(shortEl, lineText, per);
-      }
+      const room = FLIGHT - CLEARED - INK;
+      const step = (n) => Math.max(4, Math.round(room / Math.max(1, n - 1)));
+      // The head is held back rather than emptied: the whole of it, the line
+      // included, since the line is not written on a phone and would otherwise
+      // be the one thing sitting across the thumbnails as they go.
+      head.style.visibility = "hidden";
       head.dataset.writingUntil = Math.round(performance.now() + FLIGHT + 80);
+      setTimeout(() => {
+        head.style.visibility = "";
+        if (view !== "campaign") return;
+        if (narrowNow) {
+          if (nameText) typeInto(h, nameText, step(nameText.length));
+        } else {
+          // A wide screen writes both, in one hand at one speed: the step is
+          // measured off whichever of the two is longer, so the name is
+          // written in the same hand as the line rather than crawling to fill
+          // the time.
+          const per = step(Math.max(nameText.length, lineText.length, 2));
+          if (nameText) typeInto(h, nameText, per);
+          if (lineText) typeInto(shortEl, lineText, per);
+        }
+      }, CLEARED);
       // The place the picture is flying to is held empty from the first frame,
       // rather than from the frame the flight is aimed on. Otherwise the
       // picture is in two places at once for as long as the aiming waits.
@@ -2848,11 +2883,10 @@
       // choose stays solid and carries you into the campaign.
       fig.addEventListener("click", () => {
         sweepCopies();
-        // The five have to be gone by the time the sixth arrives. Left on the
-        // old timing they ran 730ms against the flight's 600, so the campaign
-        // stood there complete with thumbnails still dissolving over the top of
-        // it. Last delay plus the fade now lands just inside the flight.
-        const STEP = 40, FADE = 380;
+        // The five have to be gone before the campaign starts writing itself,
+        // not merely before its picture lands — see the note where these are
+        // set. They are over the top of the page while they fade.
+        const STEP = LEAVE_STEP, FADE = LEAVE_FADE;
         const leaving = [...grid.querySelectorAll(".tile")].map((tile, k) => {
           if (tile === fig) return null;
           const im = tile.querySelector("img");
