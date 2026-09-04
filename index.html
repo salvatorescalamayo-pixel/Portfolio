@@ -1132,7 +1132,7 @@
         { label: "The kiosk",
           phones: ["assets/pick-a-side-order.webp", "assets/pick-a-side-checkout.webp"],
           note: "Ordering is like filling in a ballot." },
-        { label: "The sticker", img: "assets/pick-a-side-reminder.webp", fit: true, fitNarrow: 0.34,
+        { label: "The sticker", img: "assets/pick-a-side-reminder.webp", fit: true, fitWide: 0.5,
           note: "A reminder that you pick your side." },
         // Left at the measure. Given the upright treatment it came out a
         // hundred and fourteen pixels wide — this screen is far narrower than
@@ -1826,16 +1826,22 @@
     // A gap short of it, the whole row lands inside, with half the gap clear
     // above and below, the same air every other row has.
     //
-    // A piece may ask for a share of that ceiling rather than all of it, and
-    // only on a phone. The sticker is one picture of one object: filling the
-    // stop end to end on a narrow screen it read as a wall of red, and the
-    // sticker on it — the whole point of the shot — was legible long before
-    // the picture was that big. On a wide screen it is in proportion, and is
-    // left alone.
+    // A piece may ask for a share of that room rather than all of it, and ask
+    // for a different share on each screen: the sticker is one object on a
+    // plain ground, and on a wide screen taking the whole measure it read as a
+    // wall of red — the legend on it was legible long before the picture was
+    // that big.
+    //
+    // The share is put on both sides of the box, not on the height alone. Which
+    // of the two is doing the holding depends on the screen — the height on a
+    // phone, where the column is narrow and tall, and the width on a desktop,
+    // where it is the other way about — so a share given only to the height
+    // does nothing at all on half the screens it is asked for.
     const fitH = Math.max(120, H - GAP);
     sc.querySelectorAll("img.fit").forEach((im) => {
-      const share = narrow ? (parseFloat(im.dataset.fitNarrow) || 1) : 1;
+      const share = parseFloat(narrow ? im.dataset.fitNarrow : im.dataset.fitWide) || 1;
       im.style.maxHeight = Math.round(fitH * share) + "px";
+      im.style.maxWidth = Math.round(share * 100) + "%";
     });
     sc.querySelectorAll("img.upright").forEach((im) => {
       if (uprightH > 0) im.style.height = uprightH + "px";
@@ -2445,6 +2451,7 @@
           im.classList.add("fit");
           cell.classList.add("center");
           if (r.fitNarrow) im.dataset.fitNarrow = r.fitNarrow;
+          if (r.fitWide) im.dataset.fitWide = r.fitWide;
         }
         if (r.big) im.classList.add("big");
         else if (r.strip) im.className = "strip";
