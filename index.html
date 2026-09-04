@@ -2000,6 +2000,30 @@
     if (!head) return;
     const i = Math.max(0, Math.min(steps.length - 1, Math.round(f)));
 
+    // On a phone the head is played to a clock rather than drawn to the
+    // scroll. Drawing it to the scroll is something only a snapped column can
+    // afford: it always comes to rest on a row, so the sentence always
+    // finishes. The scroll here is free and stops wherever the hand leaves it,
+    // and a sentence drawn to that position can stop halfway and stay there —
+    // which is exactly what was happening. Written on arrival instead, the
+    // same writing happens in the same hand, letter by letter, and it always
+    // finishes. It is written once, when the piece under it changes, and not
+    // again on every scroll that follows.
+    if (window.matchMedia("(max-width:48rem)").matches) {
+      const wantHead = steps[i].dataset.head || "";
+      const wantLine = steps[i].dataset.line || "";
+      if (head.dataset.head === wantHead && head.dataset.line === wantLine) return;
+      head.dataset.head = wantHead;
+      head.dataset.line = wantLine;
+      // The name and the line are one hand at one speed, so the step is taken
+      // from whichever of them is longer and the pair lands together.
+      const n = Math.max(wantHead.length, wantLine.length, 2);
+      const per = Math.max(6, Math.round(380 / (n - 1)));
+      typeInto(head.querySelector("h1"), wantHead, per);
+      typeInto(head.querySelector(".short"), wantLine, per);
+      return;
+    }
+
     // A row owns the ground around it, not just the point at its centre. Come
     // within SAFE of it and the column is simply written, whole — the reader
     // is not asked to land on a pixel to be allowed to read it. Only past that
@@ -2022,14 +2046,7 @@
     const sameAsNeighbour = j !== i &&
       (steps[j].dataset.head || "") === (steps[i].dataset.head || "") &&
       (steps[j].dataset.line || "") === (steps[i].dataset.line || "");
-    // None of that on a phone. Writing the head to the scroll position is a
-    // wide-screen pleasure: there the column is snapped, so it always comes to
-    // rest on a row and the sentence always finishes. On a phone the scroll is
-    // free — it stops wherever the hand left it — and a sentence written to
-    // that position stops halfway and stays halfway. There the head simply
-    // says what you are looking at, whole, every time.
-    const hold = window.matchMedia("(max-width:48rem)").matches
-      ? 1 : (sameAsNeighbour ? 1 : held);
+    const hold = sameAsNeighbour ? 1 : held;
 
     scrub(head.querySelector("h1"), steps[i].dataset.head || "", hold);
     scrub(head.querySelector(".short"), steps[i].dataset.line || "", hold);
@@ -2245,18 +2262,18 @@
   const landThumb = (fly, target) => {
     target.style.visibility = "hidden";
 
-    let done = false;
+    let done = false, watch = null;
     const land = () => {
       if (done) return;
       done = true;
+      if (watch) clearInterval(watch);
       target.style.visibility = "";
       fly.remove();
     };
-    fly.addEventListener("transitionend", land, { once: true });
 
     const launch = () => {
       if (done) return;
-      const to = target.getBoundingClientRect();
+      let to = target.getBoundingClientRect();
       if (!to.width || !to.height) { land(); return; }   // nowhere to fly to
       // Make the browser take the starting values before the ending ones are
       // set. Waiting on a frame instead is what made this jump: two frames
@@ -2267,13 +2284,44 @@
       const ease = "cubic-bezier(.4,0,.2,1)";
       fly.style.transition = ["left", "top", "width", "height"]
         .map((p) => p + " " + FLIGHT + "ms " + ease).join(",");
-      fly.style.left = to.left + "px";
-      fly.style.top = to.top + "px";
-      fly.style.width = to.width + "px";
-      fly.style.height = to.height + "px";
-      // A transition that never fires must not leave the page with a copy
-      // stuck over it and the real picture hidden underneath.
-      setTimeout(land, FLIGHT + 400);
+      const put = (r) => {
+        fly.style.left = r.left + "px";
+        fly.style.top = r.top + "px";
+        fly.style.width = r.width + "px";
+        fly.style.height = r.height + "px";
+      };
+      put(to);
+
+      // The place it is flying to can move while it is in the air. A phone
+      // fetches the campaign's pictures with the campaign already on screen,
+      // and every one that arrives re-measures the column under the flight —
+      // so the copy came down where the row had been, was taken away, and the
+      // real picture was somewhere else. That is the bounce.
+      //
+      // So the flight is re-aimed as it goes, and re-timed with it: a new end
+      // value restarts the transition from wherever the picture has got to, so
+      // it is given exactly the time the original flight had left. The picture
+      // bends towards the new place and still arrives on the same beat.
+      const started = performance.now();
+      let until = started + FLIGHT + 60;
+      watch = setInterval(() => {
+        if (done) return;
+        const now = target.getBoundingClientRect();
+        if (now.width && now.height &&
+            (Math.abs(now.left - to.left) > 0.5 || Math.abs(now.top - to.top) > 0.5 ||
+             Math.abs(now.width - to.width) > 0.5 || Math.abs(now.height - to.height) > 0.5)) {
+          to = now;
+          const left = Math.max(120, FLIGHT - (performance.now() - started));
+          fly.style.transition = ["left", "top", "width", "height"]
+            .map((p) => p + " " + Math.round(left) + "ms " + ease).join(",");
+          put(now);
+          until = Math.max(until, performance.now() + left + 60);
+        }
+        // A transition that never fires must not leave the page with a copy
+        // stuck over it and the real picture hidden underneath: the clock ends
+        // the flight, not the browser's word for it.
+        if (performance.now() >= until) land();
+      }, 60);
     };
 
     // The place it is flying to is sized by the picture that goes in it, so
@@ -2319,6 +2367,12 @@
     lineWrap.appendChild(shortEl);
     head.append(h, lineWrap);
     head.classList.add("lit");
+    // What the head already says. On a phone the head is written when the
+    // piece under it changes, and the opening row's own line has just been
+    // written by the arrival — without this the first scroll would count that
+    // as a change and write it a second time, over itself.
+    head.dataset.head = w.name;
+    head.dataset.line = bySentence(w.idea || "");
 
     const scroller = document.createElement("div");
     scroller.className = "camp-scroll";
@@ -2491,22 +2545,7 @@
     // where it really belonged. Everything below now measures a settled page.
     scroller.scrollTop = 0;
 
-    // A phone opens a campaign with everything already in place: nothing is
-    // written on the way in, and nothing travels across the page.
-    //
-    // Both were promises the page could not keep there. A phone fetches the
-    // campaign's pictures while you are already looking at it, and every one
-    // that arrives re-measures the rows — so the row the flight was aimed at
-    // moves while the flight is in the air, the copy lands where the row used
-    // to be, and the real picture is somewhere else. That is the bounce. The
-    // writing went the same way: a line typed on the way in is finished by
-    // whatever the column does next, and what the column does next is move.
-    // On a wide screen neither happens — the pictures are there, the column is
-    // snapped — so the flight and the writing stay, exactly as they were.
-    const narrowNow = window.matchMedia("(max-width:48rem)").matches;
-    if (narrowNow) {
-      if (fly) { fly.remove(); fly = null; }
-    } else if (fly) {
+    if (fly) {
       // The idea is written while the picture travels, and the two finish
       // together: the last character has to have finished darkening by the
       // time the picture lands, so the gap between characters is whatever is
